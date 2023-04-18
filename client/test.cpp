@@ -6,11 +6,7 @@
 #include <iostream>
 #include <fstream>
 
-
-
 using namespace std;
-
-
 
 void LOG(string input) {
 	fstream LogFile;

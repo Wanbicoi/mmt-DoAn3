@@ -37,8 +37,8 @@
     "**/.vscode",
     "**/.vscode/**"
   ],
-"C_Cpp_Runner.useAddressSanitizer": false,
-"files.associations": {
+  "C_Cpp_Runner.useAddressSanitizer": false,
+  "files.associations": {
     "__bit_reference": "cpp",
     "__config": "cpp",
     "__debug": "cpp",
@@ -102,5 +102,5 @@
     "variant": "cpp",
     "vector": "cpp",
     "algorithm": "cpp"
-}
+  }
 }
