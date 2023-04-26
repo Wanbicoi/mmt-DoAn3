@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-*.vscode
-=======
 */.vscode
 */build
->>>>>>> 8ce2484046dd7258d6a7d009d86345874b333f3b
+*.exe
