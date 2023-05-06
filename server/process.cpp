@@ -4,6 +4,7 @@
 #include <utility>
 #include <string>
 #include <sstream>
+#include <iostream>
 
 // To ensure correct resolution of symbols, add Psapi.lib to TARGETLIBS
 // and compile with -DPSAPI_VERSION=1
@@ -41,4 +42,9 @@ std::string list_running_processes() {
 		ss << process.first << " (PID: " << process.second << ")\n";
 	}
 	return ss.str();
+}
+
+int main() {
+	std::cout << list_running_processes();
+	return 0;
 }

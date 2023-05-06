@@ -7,7 +7,7 @@ int main()
     std::cout << "Welcome" << std::endl;
     try
     {
-        std::string raw_ip_address = "192.168.1.10";
+        std::string raw_ip_address = "192.168.1.78";
         unsigned short port_num = 13;
         asio::ip::tcp::endpoint
             ep(asio::ip::address::from_string(raw_ip_address),
