@@ -1,19 +1,14 @@
 CXX ?= g++
 
-.PHONY: main mr server
+.PHONY: main server
 
 all: main
 
-SCREEN_CAPTURE_LIBS = -lgdi32 -ld3d11 -ldxgi -ldwmapi
-LIBS = -lscreen_capture
-INCLUDE_PATH = -Iinclude/
-LIBS_PATH = -Llib/
+SCREEN_CAPTURE_LIBS = -lscreen_capture -lgdi32 -ld3d11 -ldxgi -ldwmapi
+ASIO_LIBS = -lws2_32 -lmswsock
+INCLUDE_PATH = -I../shared/include/
+LIBS_PATH = -L../shared/lib/
 
 main:
-	$(CXX) main.cpp -o main.exe $(INCLUDE_PATH) $(LIBS_PATH) $(LIBS) $(SCREEN_CAPTURE_LIBS)
-
-server:
-	$(CXX) server.cpp -Iinclude/ -lws2_32 -lmswsock
-
-mr: main
+	$(CXX) main.cpp $(INCLUDE_PATH) $(LIBS_PATH) $(SCREEN_CAPTURE_LIBS) $(ASIO_LIBS) -o main.exe
 	main.exe

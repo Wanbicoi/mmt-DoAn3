@@ -5,10 +5,16 @@
 #define NK_BUTTON_TRIGGER_ON_RELEASE
 #include "raylib-nuklear.h"
 
+#include "client.h"
+
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 
 nk_context *ctx;
+Texture2D screen_texture;
+Image screen_image;
+size_t screen_data_size;
+Camera2D camera = {0};
 
 void UpdateFrame() {
 	UpdateNuklear(ctx);
@@ -20,9 +26,13 @@ void UpdateFrame() {
 		}
 	}
 	nk_end(ctx);
-
+	get_image(screen_image.data, screen_data_size);
+	UpdateTexture(screen_texture, screen_image.data);
 	BeginDrawing();
 		ClearBackground(GRAY);
+		BeginMode2D(camera);
+			DrawTexture(screen_texture, 0, 0, WHITE);
+		EndMode2D();
 		DrawText("Congrats! You created your first window!", 190, 360, 40, LIGHTGRAY);
 		DrawNuklear(ctx);
 		DrawFPS(10, 10);
@@ -35,12 +45,18 @@ int main(void) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
 	InitAudioDevice();
 	ctx = InitNuklear(10);
-
+	connect("192.168.56.1");
+	screen_image = GenImageColor(get_client_width(), get_client_height(), BLANK);
+	screen_data_size = screen_image.width * screen_image.height * 4;
+	screen_texture = LoadTextureFromImage(screen_image);
+	camera.zoom = 1.0;
 	while (!WindowShouldClose()) {
 		UpdateFrame();
 	}
 
 	UnloadNuklear(ctx);
+	UnloadTexture(screen_texture);
+	UnloadImage(screen_image);
 	CloseAudioDevice();
 	CloseWindow();
 	return 0;

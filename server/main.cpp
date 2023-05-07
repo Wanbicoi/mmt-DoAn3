@@ -1,6 +1,10 @@
-#include "ScreenCapture.h"
-#include <atomic>
 #include <iostream>
+#include <string>
+#include <asio.hpp>
+#include <atomic>
+#include "list_running_processes.hpp"
+#include "ScreenCapture.h"
+using asio::ip::tcp;
 
 void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char *dst, size_t dst_size) {
 	assert(dst_size >= static_cast<size_t>(SL::Screen_Capture::Width(img) * SL::Screen_Capture::Height(img) * sizeof(SL::Screen_Capture::ImageBGRA)));
@@ -24,7 +28,7 @@ void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char
 	}
 }
 
-int main(void) {
+int main() {
 	auto onNewFramestart = std::chrono::high_resolution_clock::now();
 	std::atomic<int> onNewFramecounter = 0;
 	auto mons = SL::Screen_Capture::GetMonitors();
@@ -50,6 +54,35 @@ int main(void) {
 			})
 			->start_capturing();
 	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(100));
-	while(1) {};
+	try {
+		asio::io_context io_context;
+
+		tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), 13));
+
+		tcp::resolver resolver(io_context);
+		tcp::resolver::query query(asio::ip::host_name(),"");
+		tcp::resolver::iterator it=resolver.resolve(query);
+
+		//List server's ip addresses
+		while (it != tcp::resolver::iterator()) {
+			asio::ip::address addr=(it++)->endpoint().address();
+			std::cout<<addr.to_string()<<std::endl;
+		}
+
+		tcp::socket socket(io_context);
+		acceptor.accept(socket);
+
+		asio::error_code ignored_error;
+		asio::write(socket, asio::buffer(&monitor.Width, sizeof(int)), ignored_error);
+		asio::write(socket, asio::buffer(&monitor.Height, sizeof(int)), ignored_error);
+		//std::string message = list_running_processes();
+		while (1) {
+			asio::write(socket, asio::buffer(imgbuffer.get(), imgbuffersize), ignored_error);
+		}
+	}
+	catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+	}
+
 	return 0;
 }

@@ -1,17 +1,16 @@
 CXX ?= g++
 
-.PHONY: main mr client
+.PHONY: main client
 
 all: main
 
-RAYLIB_FLAG = -Iinclude/ -Llib/ -lraylib -lopengl32 -lgdi32 -lwinmm
+RAYLIB_LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm
 NO_CONSOLE = -mwindows
+ASIO_LIBS = -lws2_32 -lmswsock
+INCLUDE_PATH = -I../shared/include/
+LIBS_PATH = -L../shared/lib/
 
 main:
-	$(CXX) main.cpp $(RAYLIB_FLAG) -o main.exe
-
-client:
-	$(CXX) client.cpp -Iinclude/ -lws2_32 -lmswsock
-
-mr: main
+	$(CXX) client.cpp main.cpp $(INCLUDE_PATH) $(LIBS_PATH) $(RAYLIB_LIBS) $(ASIO_LIBS) -o main.exe
 	main.exe
+

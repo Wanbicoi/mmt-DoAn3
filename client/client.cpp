@@ -2,40 +2,34 @@
 #include <asio.hpp>
 using asio::ip::tcp;
 
-int main()
-{
-    std::cout << "Welcome" << std::endl;
-    try
-    {
-        std::string raw_ip_address = "192.168.1.78";
-        unsigned short port_num = 13;
-        asio::ip::tcp::endpoint
-            ep(asio::ip::address::from_string(raw_ip_address),
-               port_num);
-        asio::io_service ios;
-        asio::ip::tcp::socket socket(ios, ep.protocol());
+int client_width, client_height;
+asio::io_service io_service;
+tcp::socket client_socket(io_service);
 
-        socket.connect(ep);
+int get_client_width() {
+	return client_width;
+}
 
-        for (;;)
-        {
-            char buf[128];
-            asio::error_code error;
+int get_client_height() {
+	return client_height;
+}
 
-            size_t len = socket.read_some(asio::buffer(buf), error);
+void connect(const char *address) {
+	try {
+		std::string raw_ip_address(address);// = "192.168.56.1";
+		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), 13);
+		client_socket = tcp::socket(io_service, ep.protocol());
 
-            if (error == asio::error::eof)
-                break; // Connection closed cleanly by peer.
-            else if (error)
-                throw asio::system_error(error); // Some other error.
+		client_socket.connect(ep);
+		client_socket.read_some(asio::buffer(&client_width, sizeof(int)));
+		client_socket.read_some(asio::buffer(&client_height, sizeof(int)));
+	}
+	catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+	}
+}
 
-            std::cout.write(buf, len);
-        }
-    }
-    catch (std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-    }
-
-    return 0;
+void get_image(void *data, size_t size) {
+	asio::error_code error;
+	size_t len = client_socket.read_some(asio::buffer(data, size), error);
 }
