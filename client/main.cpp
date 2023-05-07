@@ -4,6 +4,7 @@
 #define NK_ASSERT(...) (void)0
 #define NK_BUTTON_TRIGGER_ON_RELEASE
 #include "raylib-nuklear.h"
+#include "fragment.h"
 
 #include "client.h"
 
@@ -15,6 +16,7 @@ Texture2D screen_texture;
 Image screen_image;
 size_t screen_data_size;
 Camera2D camera = {0};
+Shader shader;
 
 void UpdateFrame() {
 	UpdateNuklear(ctx);
@@ -29,11 +31,12 @@ void UpdateFrame() {
 	get_image(screen_image.data, screen_data_size);
 	UpdateTexture(screen_texture, screen_image.data);
 	BeginDrawing();
-		ClearBackground(GRAY);
+		ClearBackground(BLACK);
 		BeginMode2D(camera);
-			DrawTexture(screen_texture, 0, 0, WHITE);
+			BeginShaderMode(shader);
+				DrawTexture(screen_texture, 0, 0, WHITE);
+			EndShaderMode();
 		EndMode2D();
-		DrawText("Congrats! You created your first window!", 190, 360, 40, LIGHTGRAY);
 		DrawNuklear(ctx);
 		DrawFPS(10, 10);
 	EndDrawing();
@@ -49,7 +52,9 @@ int main(void) {
 	screen_image = GenImageColor(get_client_width(), get_client_height(), BLANK);
 	screen_data_size = screen_image.width * screen_image.height * 4;
 	screen_texture = LoadTextureFromImage(screen_image);
-	camera.zoom = 1.0;
+	camera.zoom = 0.5;
+	camera.offset = {-0.5, -0.5};
+	shader = LoadShaderFromMemory(NULL, fragment_shader);
 	while (!WindowShouldClose()) {
 		UpdateFrame();
 	}

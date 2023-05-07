@@ -7,6 +7,8 @@
 using asio::ip::tcp;
 
 void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char *dst, size_t dst_size) {
+	memcpy(dst, img.Data, dst_size);
+	return;
 	assert(dst_size >= static_cast<size_t>(SL::Screen_Capture::Width(img) * SL::Screen_Capture::Height(img) * sizeof(SL::Screen_Capture::ImageBGRA)));
 	auto imgsrc = StartSrc(img);
 	auto imgdist = dst;

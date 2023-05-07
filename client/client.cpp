@@ -31,5 +31,5 @@ void connect(const char *address) {
 
 void get_image(void *data, size_t size) {
 	asio::error_code error;
-	size_t len = client_socket.read_some(asio::buffer(data, size), error);
+	size_t len = asio::read(client_socket, asio::buffer(data, size), error);
 }
