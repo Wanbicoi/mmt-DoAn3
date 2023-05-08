@@ -45,16 +45,16 @@ int main() {
 			->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
 				imgbufferchanged = true;
 				ExtractAndConvertToRGBA(img, imgbuffer.get(), imgbuffersize);
-				if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - onNewFramestart).count() >=
-					1000) {
-					std::cout << "onNewFrame fps" << onNewFramecounter << std::endl;
-					onNewFramecounter = 0;
-					onNewFramestart = std::chrono::high_resolution_clock::now();
-				}
-				onNewFramecounter += 1;
+				// if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - onNewFramestart).count() >=
+				// 	1000) {
+				// 	std::cout << "onNewFrame fps" << onNewFramecounter << std::endl;
+				// 	onNewFramecounter = 0;
+				// 	onNewFramestart = std::chrono::high_resolution_clock::now();
+				// }
+				// onNewFramecounter += 1;
 			})
 			->start_capturing();
-	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(100));
+	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(16));
 	try {
 		asio::io_context io_context;
 
@@ -69,7 +69,8 @@ int main() {
 		}
 
 
-		tcp_server server(io_context, imgbuffer.get(), monitor.Width, monitor.Height, imgbuffersize);
+		ScreenServer screen_server(io_context, imgbuffer.get(), monitor.Width, monitor.Height, imgbuffersize);
+		ControlServer control_server(io_context);
 		io_context.run();
 
 		// tcp::socket socket(io_context);

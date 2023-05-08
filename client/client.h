@@ -1,10 +1,10 @@
 
-int get_client_width();
+int ScreenSocketGetWidth();
 
-int get_client_height();
+int ScreenSocketGetHeight();
 
-void SocketConnect(const char *address);
+void ScreenSocketConnect(const char *address);
 
-void SocketClose();
+void ScreenSocketGetData(void *data, size_t size);
 
-void get_image(void *data, size_t size);
+void ScreenSocketClose();

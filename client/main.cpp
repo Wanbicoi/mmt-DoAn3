@@ -8,19 +8,18 @@
 
 #include "client.h"
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 960
+#define SCREEN_HEIGHT 540
 
-nk_context *ctx;
-Texture2D screen_texture;
-Image screen_image;
-size_t screen_data_size;
+nk_context *ctx = NULL;
+Texture2D screen_texture = {0};
+Image screen_image = {0};
+size_t screen_data_size = 0;
 Camera2D camera = {0};
-Shader shader;
+Shader shader = {0};
 
 void UpdateFrame() {
 	UpdateNuklear(ctx);
-
 	if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 220, 220), NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
 		if (nk_button_label(ctx, "Button")) {
@@ -28,8 +27,9 @@ void UpdateFrame() {
 		}
 	}
 	nk_end(ctx);
-	get_image(screen_image.data, screen_data_size);
+	ScreenSocketGetData(screen_image.data, screen_data_size);
 	UpdateTexture(screen_texture, screen_image.data);
+	camera.zoom = (float) GetScreenWidth() / screen_image.width;
 	BeginDrawing();
 		ClearBackground(BLACK);
 		BeginMode2D(camera);
@@ -48,12 +48,10 @@ int main(void) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
 	InitAudioDevice();
 	ctx = InitNuklear(10);
-	SocketConnect("192.168.56.1");
-	screen_image = GenImageColor(get_client_width(), get_client_height(), BLANK);
+	ScreenSocketConnect("192.168.56.1");
+	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
 	screen_data_size = screen_image.width * screen_image.height * 4;
 	screen_texture = LoadTextureFromImage(screen_image);
-	camera.zoom = 0.5;
-	camera.offset = {-0.5, -0.5};
 	shader = LoadShaderFromMemory(NULL, fragment_shader);
 	while (!WindowShouldClose()) {
 		UpdateFrame();
@@ -62,7 +60,7 @@ int main(void) {
 	UnloadNuklear(ctx);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
-	SocketClose();
+	ScreenSocketClose();
 	CloseAudioDevice();
 	CloseWindow();
 	return 0;
