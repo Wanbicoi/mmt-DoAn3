@@ -4,11 +4,10 @@
 #include <atomic>
 #include "list_running_processes.hpp"
 #include "ScreenCapture.h"
+#include "server.h"
 using asio::ip::tcp;
 
 void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char *dst, size_t dst_size) {
-	memcpy(dst, img.Data, dst_size);
-	return;
 	assert(dst_size >= static_cast<size_t>(SL::Screen_Capture::Width(img) * SL::Screen_Capture::Height(img) * sizeof(SL::Screen_Capture::ImageBGRA)));
 	auto imgsrc = StartSrc(img);
 	auto imgdist = dst;
@@ -59,8 +58,6 @@ int main() {
 	try {
 		asio::io_context io_context;
 
-		tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), 13));
-
 		tcp::resolver resolver(io_context);
 		tcp::resolver::query query(asio::ip::host_name(),"");
 		tcp::resolver::iterator it=resolver.resolve(query);
@@ -71,16 +68,21 @@ int main() {
 			std::cout<<addr.to_string()<<std::endl;
 		}
 
-		tcp::socket socket(io_context);
-		acceptor.accept(socket);
 
-		asio::error_code ignored_error;
-		asio::write(socket, asio::buffer(&monitor.Width, sizeof(int)), ignored_error);
-		asio::write(socket, asio::buffer(&monitor.Height, sizeof(int)), ignored_error);
-		//std::string message = list_running_processes();
-		while (1) {
-			asio::write(socket, asio::buffer(imgbuffer.get(), imgbuffersize), ignored_error);
-		}
+		tcp_server server(io_context, imgbuffer.get(), monitor.Width, monitor.Height, imgbuffersize);
+		io_context.run();
+
+		// tcp::socket socket(io_context);
+		// tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), 13));
+		// acceptor.accept(socket);
+
+		// asio::error_code ignored_error;
+		// asio::write(socket, asio::buffer(&monitor.Width, sizeof(int)), ignored_error);
+		// asio::write(socket, asio::buffer(&monitor.Height, sizeof(int)), ignored_error);
+		// //std::string message = list_running_processes();
+		// while (1) {
+		// 	asio::write(socket, asio::buffer(imgbuffer.get(), imgbuffersize), ignored_error);
+		// }
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;

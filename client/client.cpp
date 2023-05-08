@@ -1,5 +1,6 @@
 #include <iostream>
 #include <asio.hpp>
+#include "define.h"
 using asio::ip::tcp;
 
 int client_width, client_height;
@@ -14,10 +15,10 @@ int get_client_height() {
 	return client_height;
 }
 
-void connect(const char *address) {
+void SocketConnect(const char *address) {
 	try {
 		std::string raw_ip_address(address);// = "192.168.56.1";
-		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), 13);
+		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), SOCKET_SCREEN_PORT);
 		client_socket = tcp::socket(io_service, ep.protocol());
 
 		client_socket.connect(ep);
@@ -32,4 +33,9 @@ void connect(const char *address) {
 void get_image(void *data, size_t size) {
 	asio::error_code error;
 	size_t len = asio::read(client_socket, asio::buffer(data, size), error);
+}
+
+void SocketClose() {
+	client_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+	client_socket.close();
 }

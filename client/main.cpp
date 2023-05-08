@@ -48,7 +48,7 @@ int main(void) {
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
 	InitAudioDevice();
 	ctx = InitNuklear(10);
-	connect("192.168.56.1");
+	SocketConnect("192.168.56.1");
 	screen_image = GenImageColor(get_client_width(), get_client_height(), BLANK);
 	screen_data_size = screen_image.width * screen_image.height * 4;
 	screen_texture = LoadTextureFromImage(screen_image);
@@ -62,6 +62,7 @@ int main(void) {
 	UnloadNuklear(ctx);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
+	SocketClose();
 	CloseAudioDevice();
 	CloseWindow();
 	return 0;
