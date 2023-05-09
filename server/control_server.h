@@ -42,12 +42,19 @@ private:
 			std::cout << "Opcode: " << buf.opcode << std::endl;
 			switch (buf.opcode) {
 				case PROCESS_LIST: {
-					std::string processes = list_running_processes();
+					auto processes = get_current_processes();
 					buf.size = processes.size();
 					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
 						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-					asio::async_write(socket_, asio::buffer(processes, buf.size),
-						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					for (auto &process: processes) {
+						int size = process.first.size();
+						asio::async_write(socket_, asio::buffer(&size, sizeof(int)),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						asio::async_write(socket_, asio::buffer(process.first, process.first.size()),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						asio::async_write(socket_, asio::buffer(&process.second, sizeof(int)),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					}
 					break;
 				}
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <asio.hpp>
 #include "define.h"
+#include "client.h"
 using asio::ip::tcp;
 
 int screen_width = 960, screen_height = 540;
@@ -41,6 +42,7 @@ void ScreenSocketClose() {
 	screen_socket.close();
 }
 
+//---------------------------------------------------------------
 
 struct ControlBuffer {
 	uint16_t opcode;
@@ -60,24 +62,39 @@ void ControlSocketConnect(const char *address) {
 	}
 }
 
+void ControlSocketClose() {
+	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+	control_socket.close();
+}
+
 void ControlSocketSendData(uint16_t opcode, int size, void *data) {
 	ControlBuffer buf = {opcode, size};
 	asio::error_code error;
 	asio::write(control_socket, asio::buffer(&buf, sizeof(buf)), error);
 }
 
-std::string ControlSocketGetDataString() {
-	ControlBuffer buf;
+void ControlSocketGetData(void *data, int size) {
 	asio::error_code error;
-	asio::read(control_socket, asio::buffer(&buf, sizeof(buf)), error);
-	std::string res;
-	res.resize(buf.size);
-	std::cout << buf.size << std::endl;
-	asio::read(control_socket, asio::buffer(res, buf.size), error);
-	return res;
+	asio::read(control_socket, asio::buffer(data, size), error);
 }
 
-void ControlSocketClose() {
-	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
-	control_socket.close();
+void ControlSocketGetData(std::string &str, int size) {
+	asio::error_code error;
+	asio::read(control_socket, asio::buffer(str, size), error);
+}
+
+std::vector<std::pair<std::string, int>> ControlSocketGetProcesses() {
+	ControlSocketSendData(PROCESS_LIST, 0, NULL);
+	ControlBuffer buf;
+	ControlSocketGetData(&buf, sizeof(buf));
+	std::vector<std::pair<std::string, int>> result(buf.size);
+	for (auto &each: result) {
+		int size;
+		ControlSocketGetData(&size, sizeof(int));
+		each.first.resize(size);
+		ControlSocketGetData(each.first, size);
+		ControlSocketGetData(&each.second, sizeof(int));
+		std::cout << "Process: " << each.first << " | PID: " << each.second << std::endl;
+	}
+	return result;
 }

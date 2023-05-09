@@ -20,14 +20,14 @@ Image screen_image = {0};
 size_t screen_data_size = 0;
 Camera2D camera = {0};
 Shader shader = {0};
+std::vector<std::pair<std::string, int>> processes;
 
 void UpdateFrame() {
 	UpdateNuklear(ctx);
 	if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 220, 220), NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
 		if (nk_button_label(ctx, "Button")) {
-			ControlSocketSendData(PROCESS_LIST, 0, NULL);
-			std::cout << ControlSocketGetDataString() << std::endl;
+			processes = ControlSocketGetProcesses();
 		}
 	}
 	nk_end(ctx);
