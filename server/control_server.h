@@ -57,6 +57,22 @@ private:
 					}
 					break;
 				}
+				case APP_LIST: {
+					auto applications = get_current_applications();
+					buf.size = applications.size();
+					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
+						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					for (auto &app: applications) {
+						int size = app.first.size();
+						asio::async_write(socket_, asio::buffer(&size, sizeof(int)),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						asio::async_write(socket_, asio::buffer(app.first, app.first.size()),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						asio::async_write(socket_, asio::buffer(&app.second, sizeof(int)),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					}
+					break;	
+				}
 
 			}
 			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 

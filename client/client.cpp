@@ -98,3 +98,19 @@ std::vector<std::pair<std::string, int>> ControlSocketGetProcesses() {
 	}
 	return result;
 }
+
+std::vector<std::pair<std::string, int>> ControlSocketGetApplications() {
+	ControlSocketSendData(APP_LIST, 0, NULL);
+	ControlBuffer buf;
+	ControlSocketGetData(&buf, sizeof(buf));
+	std::vector<std::pair<std::string, int>> result(buf.size);
+	for (auto &each: result) {
+		int size;
+		ControlSocketGetData(&size, sizeof(int));
+		each.first.resize(size);
+		ControlSocketGetData(each.first, size);
+		ControlSocketGetData(&each.second, sizeof(int));
+		std::cout << "App: " << each.first << " | PID: " << each.second << std::endl;
+	}
+	return result;
+}

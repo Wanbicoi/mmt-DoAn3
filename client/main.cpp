@@ -26,8 +26,11 @@ void UpdateFrame() {
 	UpdateNuklear(ctx);
 	if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 220, 220), NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
-		if (nk_button_label(ctx, "Button")) {
+		if (nk_button_label(ctx, "Get Processes")) {
 			processes = ControlSocketGetProcesses();
+		}
+		if (nk_button_label(ctx, "Get Apps")) {
+			processes = ControlSocketGetApplications();
 		}
 	}
 	nk_end(ctx);

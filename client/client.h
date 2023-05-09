@@ -19,3 +19,5 @@ void ControlSocketClose();
 void ControlSocketSendData(uint16_t opcode, int size, void *data);
 
 std::vector<std::pair<std::string, int>> ControlSocketGetProcesses();
+
+std::vector<std::pair<std::string, int>> ControlSocketGetApplications();
