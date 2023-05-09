@@ -6,6 +6,9 @@
 #include "raylib-nuklear.h"
 #include "fragment.h"
 
+#include <iostream>
+
+#include "define.h"
 #include "client.h"
 
 #define SCREEN_WIDTH 960
@@ -23,7 +26,8 @@ void UpdateFrame() {
 	if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 220, 220), NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
 		if (nk_button_label(ctx, "Button")) {
-			ControlSocketSendData(17, 0, NULL);
+			ControlSocketSendData(PROCESS_LIST, 0, NULL);
+			std::cout << ControlSocketGetDataString() << std::endl;
 		}
 	}
 	nk_end(ctx);
@@ -50,7 +54,6 @@ int main(void) {
 	ctx = InitNuklear(10);
 	ScreenSocketConnect("192.168.56.1");
 	ControlSocketConnect("192.168.56.1");
-	ControlSocketSendData(1, 0, NULL);
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
 	screen_data_size = screen_image.width * screen_image.height * 4;
 	screen_texture = LoadTextureFromImage(screen_image);

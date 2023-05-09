@@ -66,6 +66,17 @@ void ControlSocketSendData(uint16_t opcode, int size, void *data) {
 	asio::write(control_socket, asio::buffer(&buf, sizeof(buf)), error);
 }
 
+std::string ControlSocketGetDataString() {
+	ControlBuffer buf;
+	asio::error_code error;
+	asio::read(control_socket, asio::buffer(&buf, sizeof(buf)), error);
+	std::string res;
+	res.resize(buf.size);
+	std::cout << buf.size << std::endl;
+	asio::read(control_socket, asio::buffer(res, buf.size), error);
+	return res;
+}
+
 void ControlSocketClose() {
 	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
 	control_socket.close();

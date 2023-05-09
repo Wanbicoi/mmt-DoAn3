@@ -2,7 +2,6 @@
 #include <string>
 #include <asio.hpp>
 #include <atomic>
-#include "list_running_processes.hpp"
 #include "ScreenCapture.h"
 #include "screen_server.h"
 #include "control_server.h"

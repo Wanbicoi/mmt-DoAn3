@@ -4,6 +4,7 @@
 #include <functional>
 #include <asio.hpp>
 #include "define.h"
+#include "list_running_processes.hpp"
 using asio::ip::tcp;
 
 struct ControlBuffer {
@@ -38,7 +39,19 @@ private:
 
 	void handle_read(const asio::error_code& error, std::size_t bytes_transferred) {
 		if (!error) {
-			std::cout << "opcode: " << buf.opcode << std::endl;
+			std::cout << "Opcode: " << buf.opcode << std::endl;
+			switch (buf.opcode) {
+				case PROCESS_LIST: {
+					std::string processes = list_running_processes();
+					buf.size = processes.size();
+					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
+						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					asio::async_write(socket_, asio::buffer(processes, buf.size),
+						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					break;
+				}
+
+			}
 			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
 				std::bind(&ControlConnection::handle_read, shared_from_this(),
 					std::placeholders::_1 /*error*/, std::placeholders::_2 /*bytes_transferred*/));
@@ -48,7 +61,6 @@ private:
 	void handle_write(asio::error_code error) {
 		if (!error) {
 			//asio::write(socket_, asio::buffer(data_, data_size_), error);
-			handle_write(error);
 		}
 	}
 

@@ -1,3 +1,4 @@
+#include <string>
 
 int ScreenSocketGetWidth();
 
@@ -12,5 +13,7 @@ void ScreenSocketClose();
 void ControlSocketConnect(const char *address);
 
 void ControlSocketSendData(uint16_t opcode, int size, void *data);
+
+std::string ControlSocketGetDataString();
 
 void ControlSocketClose();
