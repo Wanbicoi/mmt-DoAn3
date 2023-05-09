@@ -4,7 +4,8 @@
 #include <atomic>
 #include "list_running_processes.hpp"
 #include "ScreenCapture.h"
-#include "server.h"
+#include "screen_server.h"
+#include "control_server.h"
 using asio::ip::tcp;
 
 void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char *dst, size_t dst_size) {
@@ -40,20 +41,19 @@ int main() {
 	memset(imgbuffer.get(), 0, imgbuffersize); // create a black image to start with
 	std::atomic<bool> imgbufferchanged = false;
 
-	auto framgrabber =
-		SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
-			->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
-				imgbufferchanged = true;
-				ExtractAndConvertToRGBA(img, imgbuffer.get(), imgbuffersize);
-				// if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - onNewFramestart).count() >=
-				// 	1000) {
-				// 	std::cout << "onNewFrame fps" << onNewFramecounter << std::endl;
-				// 	onNewFramecounter = 0;
-				// 	onNewFramestart = std::chrono::high_resolution_clock::now();
-				// }
-				// onNewFramecounter += 1;
-			})
-			->start_capturing();
+	auto framgrabber = SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
+		->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
+			imgbufferchanged = true;
+			ExtractAndConvertToRGBA(img, imgbuffer.get(), imgbuffersize);
+			// if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - onNewFramestart).count() >=
+			// 	1000) {
+			// 	std::cout << "onNewFrame fps" << onNewFramecounter << std::endl;
+			// 	onNewFramecounter = 0;
+			// 	onNewFramestart = std::chrono::high_resolution_clock::now();
+			// }
+			// onNewFramecounter += 1;
+		})
+		->start_capturing();
 	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(16));
 	try {
 		asio::io_context io_context;
@@ -69,8 +69,12 @@ int main() {
 		}
 
 
-		ScreenServer screen_server(io_context, imgbuffer.get(), monitor.Width, monitor.Height, imgbuffersize);
-		ControlServer control_server(io_context);
+		ScreenServer screen_server(io_context, [&]() {
+			return (ScreenBuffer) {monitor.Width, monitor.Height, imgbuffersize, imgbuffer.get()};
+		});
+		ControlServer control_server(io_context, [&]() {
+
+		});
 		io_context.run();
 
 		// tcp::socket socket(io_context);
