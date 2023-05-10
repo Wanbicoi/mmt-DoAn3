@@ -37,6 +37,22 @@ public:
 private:
 	ControlConnection(asio::io_context& io_context) : socket_(io_context) {}
 
+	void send(void *data, int size) {
+		asio::async_write(socket_, asio::buffer(data, size),
+			std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+	}
+
+	void send(std::string str, int size) {
+		asio::async_write(socket_, asio::buffer(str, size),
+			std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+	}
+
+	void send(std::string str) {
+		int size = str.size();
+		send(&size, sizeof(int));
+		send(str, size);
+	}
+
 	void handle_read(const asio::error_code& error, std::size_t bytes_transferred) {
 		if (!error) {
 			std::cout << "Opcode: " << buf.opcode << std::endl;
@@ -44,18 +60,11 @@ private:
 				case PROCESS_LIST: {
 					auto processes = get_current_processes();
 					buf.size = processes.size();
-					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
-						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+					send(&buf, sizeof(buf));
 					for (auto &process: processes) {
-						int size = std::get<0>(process).size();
-						asio::async_write(socket_, asio::buffer(&size, sizeof(int)),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(std::get<0>(process), size),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(&std::get<1>(process), sizeof(int)),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(&std::get<2>(process), sizeof(char)),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						send(std::get<0>(process));
+						send(&std::get<1>(process), sizeof(int));
+						send(&std::get<2>(process), sizeof(char));
 					}
 					break;
 				}
