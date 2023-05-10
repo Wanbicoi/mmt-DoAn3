@@ -33,9 +33,14 @@ void UpdateFrame() {
 	nk_end(ctx);
 	ScreenSocketGetData(screen_image.data, screen_data_size);
 	UpdateTexture(screen_texture, screen_image.data);
-	camera.zoom = (float) GetScreenWidth() / screen_image.width;
+	if (GetScreenWidth() / (float) GetScreenHeight() < screen_image.width / (float)screen_image.height)
+		camera.zoom = (float) GetScreenWidth() / screen_image.width;
+	else
+		camera.zoom = (float) GetScreenHeight() / screen_image.height;
+	camera.offset.x = (GetScreenWidth() - camera.zoom * screen_image.width) / 2;
+	camera.offset.y = (GetScreenHeight() - camera.zoom * screen_image.height) / 2;
 	BeginDrawing();
-		ClearBackground(BLACK);
+		ClearBackground(GRAY);
 		BeginMode2D(camera);
 			BeginShaderMode(shader);
 				DrawTexture(screen_texture, 0, 0, WHITE);
@@ -57,6 +62,7 @@ int main(void) {
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
 	screen_data_size = screen_image.width * screen_image.height * 4;
 	screen_texture = LoadTextureFromImage(screen_image);
+	SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
 	shader = LoadShaderFromMemory(NULL, fragment_shader);
 	while (!WindowShouldClose()) {
 		UpdateFrame();

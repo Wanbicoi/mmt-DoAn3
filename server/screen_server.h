@@ -36,12 +36,9 @@ public:
 	}
 
 	void start() {
-		ScreenBuffer buffer = callback_(); 
 		asio::error_code ignored_error;
-		asio::write(socket_, asio::buffer(&info_.width, sizeof(int)), ignored_error);
-		asio::write(socket_, asio::buffer(&info_.height, sizeof(int)), ignored_error);
-		asio::async_write(socket_, asio::buffer(buffer.screen, buffer.screen_size),
-				std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+		asio::async_write(socket_, asio::buffer(&info_, sizeof(info_)),
+			std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
 	}
 
 private:
