@@ -4,7 +4,7 @@
 #include <functional>
 #include <asio.hpp>
 #include "define.h"
-#include "list_running_processes.hpp"
+#include "processes.h"
 using asio::ip::tcp;
 
 struct ControlBuffer {
@@ -47,31 +47,17 @@ private:
 					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
 						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
 					for (auto &process: processes) {
-						int size = process.first.size();
+						int size = std::get<0>(process).size();
 						asio::async_write(socket_, asio::buffer(&size, sizeof(int)),
 							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(process.first, process.first.size()),
+						asio::async_write(socket_, asio::buffer(std::get<0>(process), size),
 							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(&process.second, sizeof(int)),
+						asio::async_write(socket_, asio::buffer(&std::get<1>(process), sizeof(int)),
+							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+						asio::async_write(socket_, asio::buffer(&std::get<2>(process), sizeof(char)),
 							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
 					}
 					break;
-				}
-				case APP_LIST: {
-					auto applications = get_current_applications();
-					buf.size = applications.size();
-					asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
-						std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-					for (auto &app: applications) {
-						int size = app.first.size();
-						asio::async_write(socket_, asio::buffer(&size, sizeof(int)),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(app.first, app.first.size()),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-						asio::async_write(socket_, asio::buffer(&app.second, sizeof(int)),
-							std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
-					}
-					break;	
 				}
 
 			}

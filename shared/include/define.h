@@ -7,7 +7,6 @@
 
 enum OperationCode : uint16_t {
 	NONE = 0,
-	APP_LIST,
 	APP_START,
 	APP_STOP,
 	PROCESS_LIST,

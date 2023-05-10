@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include <utility>
+#include <tuple>
 
 int ScreenSocketGetWidth();
 
@@ -18,6 +18,4 @@ void ControlSocketClose();
 
 void ControlSocketSendData(uint16_t opcode, int size, void *data);
 
-std::vector<std::pair<std::string, int>> ControlSocketGetProcesses();
-
-std::vector<std::pair<std::string, int>> ControlSocketGetApplications();
+std::vector<std::tuple<std::string, int, char>> ControlSocketGetProcesses();

@@ -1,40 +1,9 @@
 #include <windows.h>
 #include <tlhelp32.h>
 #include <vector>
-#include <utility>
+#include <tuple>
 #include <string>
 #include <sstream>
-
-// To ensure correct resolution of symbols, add Psapi.lib to TARGETLIBS
-// and compile with -DPSAPI_VERSION=1
-std::vector<std::pair<std::string, DWORD>> get_current_processes() {
-	HANDLE hSnapshot;
-	PROCESSENTRY32 pe;
-	BOOL hResult;
-	std::vector<std::pair<std::string, DWORD>> result;
-
-	// snapshot of all processes in the system
-	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (INVALID_HANDLE_VALUE == hSnapshot) return {};
-
-	// initializing size: needed for using Process32First
-	pe.dwSize = sizeof(PROCESSENTRY32);
-
-	// info about first process encountered in a system snapshot
-	hResult = Process32First(hSnapshot, &pe);
-
-	// retrieve information about the processes
-	// and exit if unsuccessful
-	while (hResult) {
-		result.push_back(std::pair<std::string, DWORD>(std::string(pe.szExeFile), pe.th32ProcessID));
-		hResult = Process32Next(hSnapshot, &pe);
-	}
-
-	// closes an open handle (CreateToolhelp32Snapshot)
-	CloseHandle(hSnapshot);
-	return result;
-}
-
 
 struct handle_data {
     unsigned long process_id;
@@ -64,11 +33,11 @@ HWND find_main_window(unsigned long process_id) {
 }
 // To ensure correct resolution of symbols, add Psapi.lib to TARGETLIBS
 // and compile with -DPSAPI_VERSION=1
-std::vector<std::pair<std::string, DWORD>> get_current_applications() {
+std::vector<std::tuple<std::string, int, char>> get_current_processes() {
 	HANDLE hSnapshot;
 	PROCESSENTRY32 pe;
 	BOOL hResult;
-	std::vector<std::pair<std::string, DWORD>> result;
+	std::vector<std::tuple<std::string, int, char>> result;
 
 	// snapshot of all processes in the system
 	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -83,9 +52,11 @@ std::vector<std::pair<std::string, DWORD>> get_current_applications() {
 	// retrieve information about the processes
 	// and exit if unsuccessful
 	while (hResult) {
+		char type = 0;
 		if (IsWindowVisible(find_main_window(pe.th32ProcessID))) {
-			result.push_back(std::pair<std::string, DWORD>(std::string(pe.szExeFile), pe.th32ProcessID));
+			type = 1;
 		}
+		result.push_back(std::tuple<std::string, int, char>(std::string(pe.szExeFile), (int)pe.th32ProcessID, type));
 		hResult = Process32Next(hSnapshot, &pe);
 	}
 

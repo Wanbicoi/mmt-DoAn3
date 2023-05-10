@@ -78,39 +78,30 @@ void ControlSocketGetData(void *data, int size) {
 	asio::read(control_socket, asio::buffer(data, size), error);
 }
 
-void ControlSocketGetData(std::string &str, int size) {
+std::string ControlSocketGetString() {
 	asio::error_code error;
-	asio::read(control_socket, asio::buffer(str, size), error);
+	std::string res;
+	int size;
+	asio::read(control_socket, asio::buffer(&size, sizeof(int)), error);
+	res.resize(size);
+	asio::read(control_socket, asio::buffer(res, size), error);
+	return res;
 }
 
-std::vector<std::pair<std::string, int>> ControlSocketGetProcesses() {
+std::vector<std::tuple<std::string, int, char>> ControlSocketGetProcesses() {
 	ControlSocketSendData(PROCESS_LIST, 0, NULL);
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
-	std::vector<std::pair<std::string, int>> result(buf.size);
+	std::vector<std::tuple<std::string, int, char>> result(buf.size);
 	for (auto &each: result) {
-		int size;
-		ControlSocketGetData(&size, sizeof(int));
-		each.first.resize(size);
-		ControlSocketGetData(each.first, size);
-		ControlSocketGetData(&each.second, sizeof(int));
-		std::cout << "Process: " << each.first << " | PID: " << each.second << std::endl;
-	}
-	return result;
-}
-
-std::vector<std::pair<std::string, int>> ControlSocketGetApplications() {
-	ControlSocketSendData(APP_LIST, 0, NULL);
-	ControlBuffer buf;
-	ControlSocketGetData(&buf, sizeof(buf));
-	std::vector<std::pair<std::string, int>> result(buf.size);
-	for (auto &each: result) {
-		int size;
-		ControlSocketGetData(&size, sizeof(int));
-		each.first.resize(size);
-		ControlSocketGetData(each.first, size);
-		ControlSocketGetData(&each.second, sizeof(int));
-		std::cout << "App: " << each.first << " | PID: " << each.second << std::endl;
+		std::get<0>(each) = ControlSocketGetString();
+		ControlSocketGetData(&std::get<1>(each), sizeof(int));
+		ControlSocketGetData(&std::get<2>(each), sizeof(char));
+		if (std::get<2>(each) == 1)
+			std::cout << "Application: ";
+		else
+			std::cout << "Process: ";
+		std::cout << std::get<0>(each) << " | PID: " << std::get<1>(each) << std::endl;
 	}
 	return result;
 }
