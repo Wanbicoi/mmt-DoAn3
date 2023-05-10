@@ -39,6 +39,8 @@ int main() {
 	std::unique_ptr<unsigned char[]> imgbuffer(std::make_unique<unsigned char[]>(imgbuffersize));
 	memset(imgbuffer.get(), 0, imgbuffersize); // create a black image to start with
 	std::atomic<bool> imgbufferchanged = false;
+	std::atomic<bool> mouseimgchanged = false;
+	SL::Screen_Capture::Point mouse;
 
 	auto framgrabber = SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
 		->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
@@ -52,8 +54,13 @@ int main() {
 			// }
 			// onNewFramecounter += 1;
 		})
+		->onMouseChanged([&](const SL::Screen_Capture::Image* img, const SL::Screen_Capture::MousePoint &mousepoint) {
+			mouse = mousepoint.Position;
+			if (img) mouseimgchanged = true;
+		})
 		->start_capturing();
 	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(16));
+	framgrabber->setMouseChangeInterval(std::chrono::milliseconds(16));
 	try {
 		asio::io_context io_context;
 
@@ -68,25 +75,27 @@ int main() {
 		}
 
 
-		ScreenServer screen_server(io_context, [&]() {
-			return (ScreenBuffer) {monitor.Width, monitor.Height, imgbuffersize, imgbuffer.get()};
+		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
+			ScreenBuffer buf;
+			buf.screen = imgbuffer.get();
+			buf.screen_size = imgbuffersize;
+			buf.mouse_x = mouse.x;
+			buf.mouse_y = mouse.y;
+			buf.mouse_changed = mouseimgchanged;
+			mouseimgchanged = false;
+			if (buf.mouse_changed) {
+				buf.mouse_img = NULL;
+				buf.mouse_width = 0;
+				buf.mouse_height = 0;
+				buf.mouse_size = 0;
+			}
+			return buf;
 		});
 		ControlServer control_server(io_context, [&]() {
 
 		});
 		io_context.run();
 
-		// tcp::socket socket(io_context);
-		// tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), 13));
-		// acceptor.accept(socket);
-
-		// asio::error_code ignored_error;
-		// asio::write(socket, asio::buffer(&monitor.Width, sizeof(int)), ignored_error);
-		// asio::write(socket, asio::buffer(&monitor.Height, sizeof(int)), ignored_error);
-		// //std::string message = list_running_processes();
-		// while (1) {
-		// 	asio::write(socket, asio::buffer(imgbuffer.get(), imgbuffersize), ignored_error);
-		// }
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
