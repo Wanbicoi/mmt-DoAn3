@@ -6,31 +6,32 @@
 #include <sstream>
 
 struct handle_data {
-    unsigned long process_id;
-    HWND window_handle;
+	unsigned long process_id;
+	HWND window_handle;
 };
 
 BOOL is_main_window(HWND handle) {   
-    return GetWindow(handle, GW_OWNER) == (HWND)0 && IsWindowVisible(handle);
+	return GetWindow(handle, GW_OWNER) == (HWND)0 && IsWindowVisible(handle);
 }
 
 BOOL CALLBACK enum_windows_callback(HWND handle, LPARAM lParam) {
-    handle_data& data = *(handle_data*)lParam;
-    unsigned long process_id = 0;
-    GetWindowThreadProcessId(handle, &process_id);
-    if (data.process_id != process_id || !is_main_window(handle))
-        return TRUE;
-    data.window_handle = handle;
-    return FALSE;   
+	handle_data& data = *(handle_data*)lParam;
+	unsigned long process_id = 0;
+	GetWindowThreadProcessId(handle, &process_id);
+	if (data.process_id != process_id || !is_main_window(handle))
+		return TRUE;
+	data.window_handle = handle;
+	return FALSE;   
 }
 
 HWND find_main_window(unsigned long process_id) {
-    handle_data data;
-    data.process_id = process_id;
-    data.window_handle = 0;
-    EnumWindows(enum_windows_callback, (LPARAM)&data);
-    return data.window_handle;
+	handle_data data;
+	data.process_id = process_id;
+	data.window_handle = 0;
+	EnumWindows(enum_windows_callback, (LPARAM)&data);
+	return data.window_handle;
 }
+
 // To ensure correct resolution of symbols, add Psapi.lib to TARGETLIBS
 // and compile with -DPSAPI_VERSION=1
 std::vector<std::tuple<std::string, int, char>> get_current_processes() {
@@ -63,4 +64,50 @@ std::vector<std::tuple<std::string, int, char>> get_current_processes() {
 	// closes an open handle (CreateToolhelp32Snapshot)
 	CloseHandle(hSnapshot);
 	return result;
+}
+
+BOOL PauseResumeThreadList(DWORD dwOwnerPID, bool bResumeThread) { 
+	HANDLE hThreadSnap; 
+	BOOL bRet = FALSE; 
+	THREADENTRY32 te32; 
+
+	// Take a snapshot of all threads currently in the system. 
+	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0); 
+	if (hThreadSnap == INVALID_HANDLE_VALUE) 
+		return (FALSE); 
+
+	// Fill in the size of the structure before using it. 
+	te32.dwSize = sizeof(THREADENTRY32); 
+
+	// Walk the thread snapshot to find all threads of the process. 
+	// If the thread belongs to the process, add its information 
+	// to the display list.
+	if (Thread32First(hThreadSnap, &te32)) { 
+		do  { 
+			if (te32.th32OwnerProcessID == dwOwnerPID)  {
+				HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME, FALSE, te32.th32ThreadID);
+				if (bResumeThread)
+					ResumeThread(hThread);
+				else
+					SuspendThread(hThread);
+				CloseHandle(hThread);
+			} 
+		} while (Thread32Next(hThreadSnap, &te32)); 
+		bRet = TRUE; 
+	} 
+	else 
+		bRet = FALSE; // could not walk the list of threads 
+
+	// Do not forget to clean up the snapshot object. 
+	CloseHandle(hThreadSnap); 
+
+	return (bRet); 
+} 
+
+void suspend_process(int processId) {
+	PauseResumeThreadList(processId, 0);
+}
+
+void resume_process(int processId) {
+	PauseResumeThreadList(processId, 1);
 }

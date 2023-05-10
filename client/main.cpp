@@ -45,7 +45,7 @@ void UpdateFrame() {
 		UnloadImage(mouse_image);
 		UpdateTexture(mouse_texture, mouse_data);
 
-		SetTextureFilter(mouse_texture, TEXTURE_FILTER_TRILINEAR);
+		SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
 		SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
 
 		free(mouse_data);
