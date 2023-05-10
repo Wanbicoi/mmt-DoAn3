@@ -30,8 +30,6 @@ void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char
 }
 
 int main() {
-	auto onNewFramestart = std::chrono::high_resolution_clock::now();
-	std::atomic<int> onNewFramecounter = 0;
 	auto mons = SL::Screen_Capture::GetMonitors();
 	mons.resize(1);
 	auto monitor = mons[0];
@@ -40,23 +38,29 @@ int main() {
 	memset(imgbuffer.get(), 0, imgbuffersize); // create a black image to start with
 	std::atomic<bool> imgbufferchanged = false;
 	std::atomic<bool> mouseimgchanged = false;
-	SL::Screen_Capture::Point mouse;
+	std::atomic<int> mouse_x = 0;
+	std::atomic<int> mouse_y = 0;
+	std::atomic<int> mouse_width = 0;
+	std::atomic<int> mouse_height = 0;
+	unsigned char *mouseimgbuffer = nullptr;
 
 	auto framgrabber = SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
 		->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
 			imgbufferchanged = true;
 			ExtractAndConvertToRGBA(img, imgbuffer.get(), imgbuffersize);
-			// if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - onNewFramestart).count() >=
-			// 	1000) {
-			// 	std::cout << "onNewFrame fps" << onNewFramecounter << std::endl;
-			// 	onNewFramecounter = 0;
-			// 	onNewFramestart = std::chrono::high_resolution_clock::now();
-			// }
-			// onNewFramecounter += 1;
+			
 		})
 		->onMouseChanged([&](const SL::Screen_Capture::Image* img, const SL::Screen_Capture::MousePoint &mousepoint) {
-			mouse = mousepoint.Position;
-			if (img) mouseimgchanged = true;
+			mouse_x = mousepoint.Position.x;
+			mouse_y = mousepoint.Position.y;
+			if (img) {
+				mouseimgchanged = true;
+				mouse_width = Width(*img);
+				mouse_height = Height(*img);
+				int size = mouse_width * mouse_height * 4;
+				mouseimgbuffer = (unsigned char*)realloc(mouseimgbuffer, size);
+				memcpy(mouseimgbuffer, StartSrc(*img), size);
+			}
 		})
 		->start_capturing();
 	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(16));
@@ -79,15 +83,15 @@ int main() {
 			ScreenBuffer buf;
 			buf.screen = imgbuffer.get();
 			buf.screen_size = imgbuffersize;
-			buf.mouse_x = mouse.x;
-			buf.mouse_y = mouse.y;
+			buf.mouse_x = mouse_x;
+			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouseimgchanged;
 			mouseimgchanged = false;
 			if (buf.mouse_changed) {
-				buf.mouse_img = NULL;
-				buf.mouse_width = 0;
-				buf.mouse_height = 0;
-				buf.mouse_size = 0;
+				buf.mouse_image.data = mouseimgbuffer;
+				buf.mouse_image.width = mouse_width;
+				buf.mouse_image.height = mouse_height;
+				buf.mouse_image.size = mouse_width * mouse_height * 4;
 			}
 			return buf;
 		});
@@ -100,6 +104,7 @@ int main() {
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 	}
+	free(mouseimgbuffer);
 
 	return 0;
 }

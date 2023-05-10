@@ -8,7 +8,11 @@ int ScreenSocketGetHeight();
 
 void ScreenSocketConnect(const char *address);
 
-void ScreenSocketGetData(void *data, size_t size);
+void ScreenSocketGetScreen(void *data);
+
+int ScreenSocketGetMouseInfo(int &mouse_x, int &mouse_y);
+
+unsigned char* ScreenSocketGetMouse(int &mouse_width, int &mouse_height);
 
 void ScreenSocketClose();
 

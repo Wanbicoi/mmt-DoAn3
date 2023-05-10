@@ -32,9 +32,31 @@ void ScreenSocketConnect(const char *address) {
 	}
 }
 
-void ScreenSocketGetData(void *data, size_t size) {
+void ScreenSocketGetScreen(void *data) {
 	asio::error_code error;
+	int size;
+	asio::read(screen_socket, asio::buffer(&size, sizeof(int)), error);
 	asio::read(screen_socket, asio::buffer(data, size), error);
+}
+
+int ScreenSocketGetMouseInfo(int &mouse_x, int &mouse_y) {
+	asio::error_code error;
+	int mouse_changed;
+	asio::read(screen_socket, asio::buffer(&mouse_x, sizeof(int)), error);
+	asio::read(screen_socket, asio::buffer(&mouse_y, sizeof(int)), error);
+	asio::read(screen_socket, asio::buffer(&mouse_changed, sizeof(int)), error);
+	return mouse_changed;
+}
+
+unsigned char* ScreenSocketGetMouse(int &mouse_width, int &mouse_height) {
+	asio::error_code error;
+	asio::read(screen_socket, asio::buffer(&mouse_width, sizeof(int)), error);
+	asio::read(screen_socket, asio::buffer(&mouse_height, sizeof(int)), error);
+	int size;
+	asio::read(screen_socket, asio::buffer(&size, sizeof(int)), error);
+	unsigned char *data = (unsigned char*)malloc(size);
+	asio::read(screen_socket, asio::buffer(data, size), error);
+	return data;
 }
 
 void ScreenSocketClose() {
