@@ -17,6 +17,13 @@
 #define PANEL_SIZE 38
 
 nk_context *ctx = NULL;
+bool show_applications = 0;
+bool show_processes = 0;
+bool show_directory = 0;
+bool show_settings = 0;
+
+std::string current_dir = "";
+std::vector<std::tuple<std::string, int, char>> processes;
 
 Texture2D screen_texture = {0};
 Image screen_image = {0};
@@ -26,32 +33,68 @@ Texture2D mouse_texture = {0};
 
 Camera2D camera = {0};
 Shader shader = {0};
-std::vector<std::tuple<std::string, int, char>> processes;
 
-//processes = ControlSocketGetProcesses();
+
+double last_processes_get_time = 0;
 
 void PanelView(nk_context *ctx) {
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
 		nk_layout_row_dynamic(ctx, 30, 4);
 		if (nk_button_label(ctx, "Applications")) {
-			//current_tab = APPLICATIONS;
+			show_applications = 1;
 		}
 		if (nk_button_label(ctx, "Procceses")) {
-			//current_tab = PROCESSES;
+			show_processes = 1;
 		}
 		if (nk_button_label(ctx, "Files")) {
-			//current_tab = DIRECTORY;
+			show_directory = 1;
 		}
 		if (nk_button_label(ctx, "Settings")) {
-			//current_tab = SETTINGS;
+			show_settings = 1;
 		}
 	}
 	nk_end(ctx);
 }
 
+void ApplicationsView(nk_context *ctx) {
+	if (nk_begin(ctx, "Applications", nk_rect(0, PANEL_SIZE, GetScreenWidth() / 4, GetScreenHeight() / 2), NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE)) {
+		nk_layout_row_dynamic(ctx, 20, 1);
+		for (auto &process: processes) {
+			if (std::get<2>(process) == 1)
+				nk_label(ctx, TextFormat("[%d] %s", std::get<1>(process), std::get<0>(process).c_str()), NK_TEXT_LEFT);
+		}
+	}
+	nk_end(ctx);
+	if (nk_window_is_hidden(ctx, "Applications")) show_applications = 0;
+}
+
+void ProcessesView(nk_context *ctx) {
+	if (nk_begin(ctx, "Processes", nk_rect(GetScreenWidth() / 4, PANEL_SIZE, GetScreenWidth() / 4, GetScreenHeight() / 2), NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE)) {
+		nk_layout_row_dynamic(ctx, 20, 1);
+		for (auto &process: processes) {
+			if (std::get<2>(process) == 0)
+				nk_label(ctx, TextFormat("[%d] %s", std::get<1>(process), std::get<0>(process).c_str()), NK_TEXT_LEFT);
+		}
+	}
+	nk_end(ctx);
+	if (nk_window_is_hidden(ctx, "Processes")) show_processes = 0;
+}
+
 void UpdateFrame() {
 	UpdateNuklear(ctx);
 	PanelView(ctx);
+
+	double time = GetTime();
+	if (time - last_processes_get_time >= 5 || processes.size() == 0) { //5 seconds
+		if (show_applications || show_processes) {
+			processes = ControlSocketGetProcesses();
+			last_processes_get_time = time;
+		}
+	}
+	if (show_applications) ApplicationsView(ctx);
+	if (show_processes) ProcessesView(ctx);
+
+
 	if (ScreenSocketGetMouseInfo(mouse_x, mouse_y)) {
 		unsigned char *mouse_data = ScreenSocketGetMouse(mouse_width, mouse_height);
 		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
