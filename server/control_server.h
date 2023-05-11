@@ -5,6 +5,7 @@
 #include <asio.hpp>
 #include "define.h"
 #include "processes.h"
+#include "input.h"
 using asio::ip::tcp;
 
 struct ControlBuffer {
