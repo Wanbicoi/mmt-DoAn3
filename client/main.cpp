@@ -14,6 +14,8 @@
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 540
 
+#define PANEL_SIZE 200
+
 nk_context *ctx = NULL;
 
 
@@ -29,7 +31,7 @@ std::vector<std::tuple<std::string, int, char>> processes;
 
 void UpdateFrame() {
 	UpdateNuklear(ctx);
-	if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 220, 220), NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
+	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, PANEL_SIZE, GetScreenHeight()), 0)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
 		if (nk_button_label(ctx, "Get Processes")) {
 			processes = ControlSocketGetProcesses();
@@ -52,11 +54,11 @@ void UpdateFrame() {
 	ScreenSocketGetScreen(screen_image.data);
 	UpdateTexture(screen_texture, screen_image.data);
 
-	if (GetScreenWidth() / (float) GetScreenHeight() < screen_image.width / (float)screen_image.height)
-		camera.zoom = (float) GetScreenWidth() / screen_image.width;
+	if ((GetScreenWidth() - PANEL_SIZE) / (float) GetScreenHeight() < screen_image.width / (float)screen_image.height)
+		camera.zoom = (float) (GetScreenWidth() - PANEL_SIZE) / screen_image.width;
 	else
 		camera.zoom = (float) GetScreenHeight() / screen_image.height;
-	camera.offset.x = (GetScreenWidth() - camera.zoom * screen_image.width) / 2;
+	camera.offset.x = ((GetScreenWidth() - PANEL_SIZE) - camera.zoom * screen_image.width) / 2 + PANEL_SIZE;
 	camera.offset.y = (GetScreenHeight() - camera.zoom * screen_image.height) / 2;
 
 	BeginDrawing();
@@ -68,7 +70,7 @@ void UpdateFrame() {
 			EndShaderMode();
 		EndMode2D();
 		DrawNuklear(ctx);
-		DrawFPS(10, 10);
+		DrawFPS(10, GetScreenHeight() - 20);
 	EndDrawing();
 }
 
@@ -77,7 +79,7 @@ int main(void) {
 	ControlSocketConnect("192.168.56.1");
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
-	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
+	InitWindow(SCREEN_WIDTH + PANEL_SIZE, SCREEN_HEIGHT, "3ChangDev");
 	InitAudioDevice();
 	ctx = InitNuklear(10);
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
