@@ -11,13 +11,22 @@
 #include "define.h"
 #include "client.h"
 
+enum TabView {
+	WELCOME = 0,
+	APPLICATIONS,
+	PROCESSES,
+	VIEW,
+	DIRECTORY,
+	SETTINGS
+};
+
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 540
 
 #define PANEL_SIZE 200
 
 nk_context *ctx = NULL;
-
+TabView current_tab = VIEW;
 
 Texture2D screen_texture = {0};
 Image screen_image = {0};
@@ -29,15 +38,33 @@ Camera2D camera = {0};
 Shader shader = {0};
 std::vector<std::tuple<std::string, int, char>> processes;
 
-void UpdateFrame() {
-	UpdateNuklear(ctx);
+//processes = ControlSocketGetProcesses();
+
+void PanelView() {
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, PANEL_SIZE, GetScreenHeight()), 0)) {
 		nk_layout_row_dynamic(ctx, 30, 1);
-		if (nk_button_label(ctx, "Get Processes")) {
-			processes = ControlSocketGetProcesses();
+		if (nk_button_label(ctx, "Applications")) {
+			//current_tab = APPLICATIONS;
+		}
+		if (nk_button_label(ctx, "Procceses")) {
+			//current_tab = PROCESSES;
+		}
+		if (nk_button_label(ctx, "Live View")) {
+			current_tab = VIEW;
+		}
+		if (nk_button_label(ctx, "Files")) {
+			//current_tab = DIRECTORY;
+		}
+		if (nk_button_label(ctx, "Settings")) {
+			//current_tab = SETTINGS;
 		}
 	}
 	nk_end(ctx);
+}
+
+void TabView() {
+	UpdateNuklear(ctx);
+	PanelView();
 	if (ScreenSocketGetMouseInfo(mouse_x, mouse_y)) {
 		unsigned char *mouse_data = ScreenSocketGetMouse(mouse_width, mouse_height);
 		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
@@ -87,13 +114,29 @@ int main(void) {
 	SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
 	SetTextureWrap(screen_texture, TEXTURE_WRAP_CLAMP);
 
-	Image mouse_image = GenImageColor(1, 1, BLANK);
+	Image mouse_image = GenImageColor(32, 32, BLANK);
 	mouse_texture = LoadTextureFromImage(mouse_image);
 	UnloadImage(mouse_image);
 
 	shader = LoadShaderFromMemory(NULL, fragment_shader);
 	while (!WindowShouldClose()) {
-		UpdateFrame();
+		switch (current_tab) {
+			case WELCOME:
+				break;
+			case APPLICATIONS:
+				break;
+			case PROCESSES:
+				break;
+			case VIEW:
+				TabView();
+				break;
+			case DIRECTORY:
+				break;
+			case SETTINGS:
+				break;
+			default:
+				break;
+		}
 	}
 
 	UnloadNuklear(ctx);
