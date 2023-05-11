@@ -88,7 +88,7 @@ int main() {
 				std::cout << ip << std::endl;
 		}
 		else {
-			std::cout << "Error! Can't find your machine IP" std::endl;
+			std::cout << "Error! Can't find your machine IP" << std::endl;
 			return -2;
 		}
 

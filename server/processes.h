@@ -102,7 +102,21 @@ BOOL PauseResumeThreadList(DWORD dwOwnerPID, bool bResumeThread) {
 	CloseHandle(hThreadSnap); 
 
 	return (bRet); 
-} 
+}
+
+BOOL TerminateProcessEx(DWORD dwProcessId, UINT uExitCode) {
+	DWORD dwDesiredAccess = PROCESS_TERMINATE;
+	BOOL bInheritHandle = FALSE;
+	HANDLE hProcess = OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId);
+	if (hProcess == NULL)
+		return FALSE;
+
+	BOOL result = TerminateProcess(hProcess, uExitCode);
+
+	CloseHandle(hProcess);
+
+	return result;
+}
 
 void suspend_process(int processId) {
 	PauseResumeThreadList(processId, 0);
@@ -110,4 +124,8 @@ void suspend_process(int processId) {
 
 void resume_process(int processId) {
 	PauseResumeThreadList(processId, 1);
+}
+
+void terminate_process(int processId) {
+	TerminateProcessEx(processId, -1);
 }
