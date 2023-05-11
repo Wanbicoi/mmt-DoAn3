@@ -38,16 +38,15 @@ void UpdateFrame() {
 	nk_end(ctx);
 	if (ScreenSocketGetMouseInfo(mouse_x, mouse_y)) {
 		unsigned char *mouse_data = ScreenSocketGetMouse(mouse_width, mouse_height);
-		UnloadTexture(mouse_texture);
-
-		Image mouse_image = GenImageColor(mouse_width, mouse_height, BLANK);
-		mouse_texture = LoadTextureFromImage(mouse_image);
-		UnloadImage(mouse_image);
+		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
+			UnloadTexture(mouse_texture);
+			Image mouse_image = GenImageColor(mouse_width, mouse_height, BLANK);
+			mouse_texture = LoadTextureFromImage(mouse_image);
+			UnloadImage(mouse_image);
+			SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
+		}
 		UpdateTexture(mouse_texture, mouse_data);
-
-		SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
-		SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
-
 		free(mouse_data);
 	}
 	ScreenSocketGetScreen(screen_image.data);
@@ -74,16 +73,17 @@ void UpdateFrame() {
 }
 
 int main(void) {
+	ScreenSocketConnect("192.168.56.1");
+	ControlSocketConnect("192.168.56.1");
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
 	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
 	InitAudioDevice();
 	ctx = InitNuklear(10);
-	ScreenSocketConnect("192.168.56.1");
-	ControlSocketConnect("192.168.56.1");
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
 	screen_texture = LoadTextureFromImage(screen_image);
 	SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
+	SetTextureWrap(screen_texture, TEXTURE_WRAP_CLAMP);
 
 	Image mouse_image = GenImageColor(1, 1, BLANK);
 	mouse_texture = LoadTextureFromImage(mouse_image);
@@ -97,8 +97,8 @@ int main(void) {
 	UnloadNuklear(ctx);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
-	ScreenSocketClose();
-	ControlSocketClose();
+	//ScreenSocketClose();
+	//ControlSocketClose();
 	CloseAudioDevice();
 	CloseWindow();
 	return 0;

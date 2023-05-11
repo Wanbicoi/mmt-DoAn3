@@ -41,7 +41,7 @@ void ScreenSocketGetScreen(void *data) {
 
 int ScreenSocketGetMouseInfo(int &mouse_x, int &mouse_y) {
 	asio::error_code error;
-	int mouse_changed;
+	int mouse_changed = 0;
 	asio::read(screen_socket, asio::buffer(&mouse_x, sizeof(int)), error);
 	asio::read(screen_socket, asio::buffer(&mouse_y, sizeof(int)), error);
 	asio::read(screen_socket, asio::buffer(&mouse_changed, sizeof(int)), error);
