@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 #include <asio.hpp>
 #include <atomic>
 #include "ScreenCapture.h"
@@ -69,15 +70,27 @@ int main() {
 		asio::io_context io_context;
 
 		tcp::resolver resolver(io_context);
-		tcp::resolver::query query(asio::ip::host_name(),"");
+		tcp::resolver::query query(asio::ip::host_name(), "");
 		tcp::resolver::iterator it=resolver.resolve(query);
 
+		std::vector<std::string> local_ips;
 		//List server's ip addresses
 		while (it != tcp::resolver::iterator()) {
 			asio::ip::address addr=(it++)->endpoint().address();
-			std::cout<<addr.to_string()<<std::endl;
+			if (addr.is_v4())
+				local_ips.push_back(addr.to_string());
 		}
-
+		if (local_ips.size()) {
+			std::cout << "The server is hosted on the following ";
+			if (local_ips.size() > 1) std::cout << "IPs: " << std::endl;
+			else std::cout << "IP: " << std::endl;
+			for (auto &ip: local_ips)
+				std::cout << ip << std::endl;
+		}
+		else {
+			std::cout << "Error! Can't find your machine IP" std::endl;
+			return -2;
+		}
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
 			ScreenBuffer buf;
