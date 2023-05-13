@@ -4,7 +4,7 @@
 #include "client.h"
 using asio::ip::tcp;
 
-int screen_width = 960, screen_height = 540;
+int screen_width = 1920, screen_height = 1080;
 asio::io_context io_context;
 tcp::socket screen_socket(io_context);
 tcp::socket control_socket(io_context);
@@ -114,6 +114,7 @@ std::vector<std::tuple<std::string, int, char>> ControlSocketGetProcesses() {
 	ControlSocketSendData(PROCESS_LIST, 0, NULL);
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
+	if (buf.opcode != PROCESS_LIST) return {};
 	std::vector<std::tuple<std::string, int, char>> result(buf.size);
 	for (auto &each: result) {
 		std::get<0>(each) = ControlSocketGetString();
