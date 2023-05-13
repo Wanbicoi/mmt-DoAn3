@@ -63,9 +63,8 @@ void ApplicationsView(nk_context *ctx) {
 			if (std::get<2>(process) == 1)
 				nk_label(ctx, TextFormat("[%d] %s", std::get<1>(process), std::get<0>(process).c_str()), NK_TEXT_LEFT);
 		}
-	}
+	} else show_applications = 0;
 	nk_end(ctx);
-	if (nk_window_is_hidden(ctx, "Applications")) show_applications = 0;
 }
 
 void ProcessesView(nk_context *ctx) {
@@ -75,9 +74,8 @@ void ProcessesView(nk_context *ctx) {
 			if (std::get<2>(process) == 0)
 				nk_label(ctx, TextFormat("[%d] %s", std::get<1>(process), std::get<0>(process).c_str()), NK_TEXT_LEFT);
 		}
-	}
+	} else show_processes = 0;
 	nk_end(ctx);
-	if (nk_window_is_hidden(ctx, "Processes")) show_processes = 0;
 }
 
 void UpdateFrame() {
