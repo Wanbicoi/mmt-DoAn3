@@ -10,9 +10,9 @@ void ScreenSocketConnect(const char *address);
 
 void ScreenSocketGetScreen(void *data);
 
-int ScreenSocketGetMouseInfo(int &mouse_x, int &mouse_y);
+int ScreenSocketGetMouseInfo(int *mouse_x, int *mouse_y);
 
-unsigned char* ScreenSocketGetMouse(int &mouse_width, int &mouse_height);
+unsigned char* ScreenSocketGetMouse(int *mouse_width, int *mouse_height);
 
 void ScreenSocketClose();
 

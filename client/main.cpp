@@ -91,9 +91,9 @@ void UpdateFrame() {
 
 
 	//Get mouse location and whether mouse image has changed
-	if (ScreenSocketGetMouseInfo(mouse_x, mouse_y)) {
+	if (ScreenSocketGetMouseInfo(&mouse_x, &mouse_y)) {
 		//Mouse image changed
-		unsigned char *mouse_data = ScreenSocketGetMouse(mouse_width, mouse_height);
+		unsigned char *mouse_data = ScreenSocketGetMouse(&mouse_width, &mouse_height);
 		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
 			//Size changed, create new texture
 			UnloadTexture(mouse_texture);
