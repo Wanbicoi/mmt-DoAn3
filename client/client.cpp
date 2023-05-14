@@ -1,6 +1,6 @@
 #include <iostream>
 #include <asio.hpp>
-#include "define.h"
+#include "types.h"
 #include "client.h"
 using asio::ip::tcp;
 
@@ -66,11 +66,6 @@ void ScreenSocketClose() {
 
 //---------------------------------------------------------------
 
-struct ControlBuffer {
-	uint16_t opcode;
-	int size;
-};
-
 void ControlSocketConnect(const char *address) {
 	try {
 		std::string raw_ip_address(address);
@@ -110,21 +105,21 @@ std::string ControlSocketGetString() {
 	return res;
 }
 
-std::vector<std::tuple<std::string, int, char>> ControlSocketGetProcesses() {
+std::vector<ProcessInfo> ControlSocketGetProcesses() {
 	ControlSocketSendData(PROCESS_LIST, 0, NULL);
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
 	if (buf.opcode != PROCESS_LIST) return {};
-	std::vector<std::tuple<std::string, int, char>> result(buf.size);
-	for (auto &each: result) {
-		std::get<0>(each) = ControlSocketGetString();
-		ControlSocketGetData(&std::get<1>(each), sizeof(int));
-		ControlSocketGetData(&std::get<2>(each), sizeof(char));
-		if (std::get<2>(each) == 1)
+	std::vector<ProcessInfo> processes(buf.size);
+	for (auto &process: processes) {
+		ControlSocketGetData(&process.pid, sizeof(int));
+		process.name = ControlSocketGetString();
+		ControlSocketGetData(&process.type, sizeof(char));
+		if (process.type == 1)
 			std::cout << "Application: ";
 		else
 			std::cout << "Process: ";
-		std::cout << std::get<0>(each) << " | PID: " << std::get<1>(each) << std::endl;
+		std::cout << process.name << " | PID: " << process.pid << std::endl;
 	}
-	return result;
+	return processes;
 }

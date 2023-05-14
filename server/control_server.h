@@ -3,15 +3,10 @@
 #include <memory>
 #include <functional>
 #include <asio.hpp>
-#include "define.h"
+#include "types.h"
 #include "processes.h"
 #include "input.h"
 using asio::ip::tcp;
-
-struct ControlBuffer {
-	uint16_t opcode;
-	int size;
-};
 
 class ControlConnection : public std::enable_shared_from_this<ControlConnection> {
 public:
@@ -63,9 +58,9 @@ private:
 					buf.size = processes.size();
 					send(&buf, sizeof(buf));
 					for (auto &process: processes) {
-						send(std::get<0>(process));
-						send(&std::get<1>(process), sizeof(int));
-						send(&std::get<2>(process), sizeof(char));
+						send(&process.pid, sizeof(int));
+						send(process.name);
+						send(&process.type, sizeof(char));
 					}
 					break;
 				}

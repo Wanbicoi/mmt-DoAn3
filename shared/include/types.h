@@ -1,6 +1,7 @@
 //#define UDP_SOCKET_PORT 5445
 //#define TCP_SOCKET_PORT 4435
 #pragma once
+#include <string>
 
 #define SOCKET_SCREEN_PORT 5343
 #define SOCKET_CONTROL_PORT 4354
@@ -26,4 +27,36 @@ enum OperationCode : uint16_t {
 	FS_MOVE,
 	FS_WRITE,
 	FS_DELETE
+};
+
+struct ScreenInfo {
+	int width;
+	int height;
+};
+
+struct MouseImage {
+	void *data;
+	int width;
+	int height;
+	int size;
+};
+
+struct ScreenBuffer {
+	void *screen;
+	int screen_size;
+	int mouse_x;
+	int mouse_y;
+	int mouse_changed;
+	MouseImage mouse_image;
+};
+
+struct ControlBuffer {
+	uint16_t opcode;
+	int size;
+};
+
+struct ProcessInfo {
+	int pid;
+	std::string name;
+	char type;
 };

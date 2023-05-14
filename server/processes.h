@@ -1,7 +1,6 @@
 #include <windows.h>
 #include <tlhelp32.h>
 #include <vector>
-#include <tuple>
 #include <string>
 #include <sstream>
 
@@ -34,11 +33,11 @@ HWND find_main_window(unsigned long process_id) {
 
 // To ensure correct resolution of symbols, add Psapi.lib to TARGETLIBS
 // and compile with -DPSAPI_VERSION=1
-std::vector<std::tuple<std::string, int, char>> get_current_processes() {
+std::vector<ProcessInfo> get_current_processes() {
 	HANDLE hSnapshot;
 	PROCESSENTRY32 pe;
 	BOOL hResult;
-	std::vector<std::tuple<std::string, int, char>> result;
+	std::vector<ProcessInfo> result;
 
 	// snapshot of all processes in the system
 	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -57,7 +56,7 @@ std::vector<std::tuple<std::string, int, char>> get_current_processes() {
 		if (IsWindowVisible(find_main_window(pe.th32ProcessID))) {
 			type = 1;
 		}
-		result.push_back(std::tuple<std::string, int, char>(std::string(pe.szExeFile), (int)pe.th32ProcessID, type));
+		result.push_back({(int)pe.th32ProcessID, std::string(pe.szExeFile), type});
 		hResult = Process32Next(hSnapshot, &pe);
 	}
 

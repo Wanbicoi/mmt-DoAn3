@@ -3,29 +3,8 @@
 #include <memory>
 #include <functional>
 #include <asio.hpp>
-#include "define.h"
+#include "types.h"
 using asio::ip::tcp;
-
-struct ScreenInfo {
-	int width;
-	int height;
-};
-
-struct MouseImage {
-	void *data;
-	int width;
-	int height;
-	int size;
-};
-
-struct ScreenBuffer {
-	void *screen;
-	int screen_size;
-	int mouse_x;
-	int mouse_y;
-	int mouse_changed;
-	MouseImage mouse_image;
-};
 
 class ScreenConnection : public std::enable_shared_from_this<ScreenConnection> {
 public:
