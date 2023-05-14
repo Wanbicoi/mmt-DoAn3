@@ -8,11 +8,14 @@
 
 enum OperationCode : uint16_t {
 	NONE = 0,
+	//Processes and Applications
 	PROCESS_LIST,
 	PROCESS_SUSPEND,
 	PROCESS_RESUME,
 	PROCESS_KILL,
+	//Input: Keyboard
 	KEYBOARD_DOWN,
+	//Input: Mouse
 	MOUSE_MOVE,
 	MOUSE_LEFT_DOWN,
 	MOUSE_LEFT_UP,
@@ -22,10 +25,13 @@ enum OperationCode : uint16_t {
 	MOUSE_RIGHT_UP,
 	MOUSE_WHEEL_V,
 	MOUSE_WHEEL_H,
+	//File system
+	FS_INIT,
 	FS_LIST,
 	FS_COPY,
 	FS_MOVE,
 	FS_WRITE,
+	FS_ASK_OPTION,
 	FS_DELETE
 };
 
@@ -52,7 +58,7 @@ struct ScreenBuffer {
 
 struct ControlBuffer {
 	uint16_t opcode;
-	int size;
+	int data;
 };
 
 struct ProcessInfo {

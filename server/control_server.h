@@ -49,7 +49,7 @@ private:
 			switch (buf.opcode) {
 				case PROCESS_LIST: {
 					auto processes = get_current_processes();
-					buf.size = processes.size();
+					buf.data = processes.size();
 					send(&buf, sizeof(buf));
 					for (auto &process: processes) {
 						send(&process.pid, sizeof(int));

@@ -110,7 +110,7 @@ std::vector<ProcessInfo> ControlSocketGetProcesses() {
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
 	if (buf.opcode != PROCESS_LIST) return {};
-	std::vector<ProcessInfo> processes(buf.size);
+	std::vector<ProcessInfo> processes(buf.data);
 	for (auto &process: processes) {
 		ControlSocketGetData(&process.pid, sizeof(int));
 		process.name = ControlSocketGetString();
