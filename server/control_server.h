@@ -34,19 +34,13 @@ private:
 	ControlConnection(asio::io_context& io_context) : socket_(io_context) {}
 
 	void send(void *data, int size) {
-		asio::async_write(socket_, asio::buffer(data, size),
-			std::bind(&ControlConnection::void_write, shared_from_this()));
-	}
-
-	void send(std::string str, int size) {
-		asio::async_write(socket_, asio::buffer(str, size),
-			std::bind(&ControlConnection::void_write, shared_from_this()));
+		asio::async_write(socket_, asio::buffer(data, size), std::bind(&void_write, shared_from_this()));
 	}
 
 	void send(std::string str) {
 		int size = str.size();
-		send(&size, sizeof(int));
-		send(str, size);
+		asio::async_write(socket_, asio::buffer(&size, sizeof(int)), std::bind(&void_write, shared_from_this()));
+		asio::async_write(socket_, asio::buffer(str, size), std::bind(&void_write, shared_from_this()));
 	}
 
 	void handle_read(const asio::error_code& error, std::size_t bytes_transferred) {
@@ -74,7 +68,7 @@ private:
 
 	void handle_write(asio::error_code error) {
 		if (!error) {
-			
+
 		}
 	}
 
