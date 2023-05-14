@@ -35,12 +35,12 @@ private:
 
 	void send(void *data, int size) {
 		asio::async_write(socket_, asio::buffer(data, size),
-			std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+			std::bind(&ControlConnection::void_write, shared_from_this()));
 	}
 
 	void send(std::string str, int size) {
 		asio::async_write(socket_, asio::buffer(str, size),
-			std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+			std::bind(&ControlConnection::void_write, shared_from_this()));
 	}
 
 	void send(std::string str) {
@@ -74,9 +74,11 @@ private:
 
 	void handle_write(asio::error_code error) {
 		if (!error) {
-			//asio::write(socket_, asio::buffer(data_, data_size_), error);
+			
 		}
 	}
+
+	void void_write() {}
 
 	tcp::socket socket_;
 	ControlBuffer buf;
