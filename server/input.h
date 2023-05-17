@@ -1,11 +1,11 @@
 #include <windows.h>
 
-void mouse_move(int x, int y, int width, int height) {
+void mouse_move(float x, float y, int width, int height) {
 	INPUT input = {0};
 
 	input.type = INPUT_MOUSE;
 	input.mi.dx = (int) (x / (float)width * 65535);
-	input.mi.dy = (int) (y / (float)width * 65535);
+	input.mi.dy = (int) (y / (float)height * 65535);
 	input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 	SendInput(1, &input, sizeof(INPUT));

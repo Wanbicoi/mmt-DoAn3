@@ -84,13 +84,23 @@ void ControlSocketClose() {
 	control_socket.close();
 }
 
-void ControlSocketSendData(ControlBuffer ctrlBuf, void *data) {
+void ControlSocketSendControl(OperationCode opcode, int data, void *raw_data) {
+	ControlBuffer buf = {opcode, data};
 	asio::error_code error;
-	asio::write(control_socket, asio::buffer(&ctrlBuf, sizeof(ctrlBuf)), error);
-	if (data) {
-		asio::write(control_socket, asio::buffer(data, ctrlBuf.data), error);
+	asio::write(control_socket, asio::buffer(&buf, sizeof(buf)), error);
+	if (raw_data) {
+		asio::write(control_socket, asio::buffer(raw_data, data), error);
 	}
 }
+
+// template <typename T>
+// void ControlSocketSendType(T obj) {
+// 	asio::error_code error;
+// 	asio::write(control_socket, asio::buffer(&obj, sizeof(obj)), error);
+// }
+
+// template void ControlSocketSendType<int>(int);
+// template void ControlSocketSendType<float>(float);
 
 void ControlSocketGetData(void *data, int size) {
 	asio::error_code error;
@@ -108,7 +118,7 @@ std::string ControlSocketGetString() {
 }
 
 std::vector<ProcessInfo> ControlSocketGetProcesses() {
-	ControlSocketSendData({PROCESS_LIST, 0}, NULL);
+	ControlSocketSendControl(PROCESS_LIST);
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
 	if (buf.opcode != PROCESS_LIST) return {};

@@ -82,15 +82,15 @@ void ProcessesView(nk_context *ctx, char type) {
 				nk_label(ctx, TextFormat("%d", process.pid), NK_TEXT_CENTERED);
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_RECT_SOLID, "Suspend", NK_TEXT_RIGHT)) {
-					ControlSocketSendData({PROCESS_SUSPEND, process.pid}, NULL);
+					ControlSocketSendControl(PROCESS_SUSPEND, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "Resume", NK_TEXT_RIGHT)) {
-					ControlSocketSendData({PROCESS_RESUME, process.pid}, NULL);
+					ControlSocketSendControl(PROCESS_RESUME, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_X, "Terminate", NK_TEXT_RIGHT)) {
-					ControlSocketSendData({PROCESS_KILL, process.pid}, NULL);
+					ControlSocketSendControl(PROCESS_KILL, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 			}
@@ -199,11 +199,14 @@ void UpdateFrame() {
 		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
 			for (int i = 0; i < 3; i++) {
 				if (IsMouseButtonPressed(mouse_type[i])) {
-					ControlSocketSendData({mouse_op_down[i], 0}, NULL);
+					std::cout << mouse.x << " | " << mouse.y << std::endl;
+					MousePosition mp = {mouse.x, mouse.y, screen_image.width, screen_image.height};
+					ControlSocketSendControl(MOUSE_MOVE, sizeof(mp), &mp);
+					ControlSocketSendControl(mouse_op_down[i]);
 					mouse_was_down[i] = 1;
 				}
 				if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
-					ControlSocketSendData({mouse_op_up[i], 0}, NULL);
+					ControlSocketSendControl(mouse_op_up[i]);
 					mouse_was_down[i] = 0;
 				}
 			}
@@ -219,8 +222,8 @@ void UpdateFrame() {
 			EndShaderMode();
 		EndMode2D();
 		DrawNuklear(ctx);
-		//DrawFPS(10, GetScreenHeight() - 20);
-		DrawText(TextFormat("%d", mouse_interacting_nuklear), 10, GetScreenHeight() - 20, 20, GREEN);
+		DrawFPS(10, GetScreenHeight() - 20);
+		//DrawText(TextFormat("%d", mouse_interacting_nuklear), 10, GetScreenHeight() - 20, 20, GREEN);
 	EndDrawing();
 }
 

@@ -33,6 +33,13 @@ public:
 private:
 	ControlConnection(asio::io_context& io_context) : socket_(io_context) {}
 
+	template <class T>
+	T receive() {
+		T obj;
+		asio::read(socket_, asio::buffer(&obj, sizeof(obj)));
+		return obj;
+	}
+
 	void send(void *data, int size) {
 		asio::async_write(socket_, asio::buffer(data, size), std::bind(&void_write, shared_from_this()));
 	}
@@ -67,6 +74,27 @@ private:
 				case PROCESS_KILL:
 					terminate_process(buf.data);
 					break;
+				case MOUSE_MOVE: {
+					MousePosition mp = receive<MousePosition>();
+					mouse_move(mp.x, mp.y, mp.width, mp.height);
+					break;
+				}
+				case MOUSE_LEFT_DOWN:
+					break;
+				case MOUSE_LEFT_UP:
+					break;
+				case MOUSE_MIDDLE_DOWN:
+					break;
+				case MOUSE_MIDDLE_UP:
+					break;
+				case MOUSE_RIGHT_DOWN:
+					break;
+				case MOUSE_RIGHT_UP:
+					break;
+				case MOUSE_WHEEL_V:
+					break;
+				case MOUSE_WHEEL_H:
+					break;
 			}
 			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
 				std::bind(&ControlConnection::handle_read, shared_from_this(),
@@ -83,6 +111,8 @@ private:
 	void void_write() {}
 
 	tcp::socket socket_;
+	int mouse_x = 0;
+	int mouse_y = 0;
 	ControlBuffer buf;
 };
 

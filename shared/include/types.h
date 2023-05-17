@@ -16,8 +16,7 @@ enum OperationCode : uint16_t {
 	//Input: Keyboard
 	KEYBOARD_DOWN,
 	//Input: Mouse
-	MOUSE_MOVE_X,
-	MOUSE_MOVE_Y,
+	MOUSE_MOVE,
 	MOUSE_LEFT_DOWN,
 	MOUSE_LEFT_UP,
 	MOUSE_MIDDLE_DOWN,
@@ -46,6 +45,13 @@ struct MouseImage {
 	int width;
 	int height;
 	int size;
+};
+
+struct MousePosition {
+	float x;
+	float y;
+	int width;
+	int height;
 };
 
 struct ScreenBuffer {
