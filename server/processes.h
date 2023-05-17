@@ -56,7 +56,9 @@ std::vector<ProcessInfo> get_current_processes() {
 		if (IsWindowVisible(find_main_window(pe.th32ProcessID))) {
 			type = 1;
 		}
-		result.push_back({(int)pe.th32ProcessID, std::string(pe.szExeFile), type});
+		if (pe.th32ProcessID > 4) { //Skip some system processes
+			result.push_back({(int)pe.th32ProcessID, std::string(pe.szExeFile), type});
+		}
 		hResult = Process32Next(hSnapshot, &pe);
 	}
 

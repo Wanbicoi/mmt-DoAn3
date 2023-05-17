@@ -20,6 +20,6 @@ void ControlSocketConnect(const char *address);
 
 void ControlSocketClose();
 
-void ControlSocketSendData(uint16_t opcode, int size, void *data);
+void ControlSocketSendData(ControlBuffer ctrlBuf, void *data);
 
 std::vector<ProcessInfo> ControlSocketGetProcesses();

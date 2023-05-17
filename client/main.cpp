@@ -15,10 +15,15 @@
 #define PANEL_SIZE 38
 
 nk_context *ctx = NULL;
-bool show_applications = 0;
-bool show_processes = 0;
-bool show_directory = 0;
-bool show_settings = 0;
+enum View {
+	VIEW_NONE = 0,
+	VIEW_APP,
+	VIEW_PROCESS,
+	VIEW_DIRECTORY,
+	VIEW_SETTINGS,
+};
+
+View current_view = VIEW_NONE;
 
 std::string current_dir = "";
 std::vector<ProcessInfo> processes;
@@ -32,46 +37,79 @@ Texture2D mouse_texture = {0};
 Camera2D camera = {0};
 Shader shader = {0};
 
-double last_processes_get_time = -5;
+#define PROCESS_FETCH_INTERVAL 5
+double last_processes_get_time = -PROCESS_FETCH_INTERVAL; //seconds
 
 void PanelView(nk_context *ctx) {
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
 		nk_layout_row_dynamic(ctx, 30, 4);
 		if (nk_button_label(ctx, "Applications")) {
-			show_applications = 1;
+			current_view = VIEW_APP;
 		}
 		if (nk_button_label(ctx, "Procceses")) {
-			show_processes = 1;
+			current_view = VIEW_PROCESS;
 		}
 		if (nk_button_label(ctx, "Files")) {
-			show_directory = 1;
+			current_view = VIEW_DIRECTORY;
 		}
 		if (nk_button_label(ctx, "Settings")) {
-			show_settings = 1;
+			current_view = VIEW_SETTINGS;
 		}
 	}
 	nk_end(ctx);
 }
 
-void ApplicationsView(nk_context *ctx) {
-	if (nk_begin(ctx, "Applications", nk_rect(0, PANEL_SIZE, GetScreenWidth() / 4, GetScreenHeight() / 2), NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE)) {
-		nk_layout_row_dynamic(ctx, 20, 1);
-		for (auto &process: processes) {
-			if (process.type == 1)
-				nk_label(ctx, TextFormat("[%d] %s", process.pid, process.name.c_str()), NK_TEXT_LEFT);
-		}
-	} else show_applications = 0;
-	nk_end(ctx);
+int view_begin(const char *name) {
+	const int pad_x = 50;
+	const int pad_y = 50;
+	return nk_begin(ctx, name,
+		nk_rect(pad_x, pad_y, ScreenSocketGetWidth() / 2 - pad_x * 2, ScreenSocketGetHeight() / 2 - pad_y * 2),
+		NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE | NK_WINDOW_MOVABLE);
 }
 
-void ProcessesView(nk_context *ctx) {
-	if (nk_begin(ctx, "Processes", nk_rect(GetScreenWidth() / 4, PANEL_SIZE, GetScreenWidth() / 4, GetScreenHeight() / 2), NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE)) {
-		nk_layout_row_dynamic(ctx, 20, 1);
+void ProcessesView(nk_context *ctx, char type) {
+	const int pid_size = 50;
+	const int button_size = 100;
+	const char *window_name[] = {"Procceses", "Applications"};
+	if (view_begin(window_name[type])) {
+		//Header
+		nk_layout_row_template_begin(ctx, 30);
+		nk_layout_row_template_push_static(ctx, pid_size);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_push_static(ctx, button_size * 3);
+		nk_layout_row_template_end(ctx);
+
+		nk_label(ctx, "PID", NK_TEXT_CENTERED);
+		nk_label(ctx, "Executable", NK_TEXT_LEFT);
+		nk_label(ctx, "Action", NK_TEXT_LEFT);
+
+		//Content
+		nk_layout_row_template_begin(ctx, 30);
+		nk_layout_row_template_push_static(ctx, pid_size); //PID fixed width of 50
+		nk_layout_row_template_push_dynamic(ctx); //Name can grow or shrink
+		nk_layout_row_template_push_static(ctx, button_size); //Button
+		nk_layout_row_template_push_static(ctx, button_size); //Button
+		nk_layout_row_template_push_static(ctx, button_size); //Button
+		nk_layout_row_template_end(ctx);
 		for (auto &process: processes) {
-			if (process.type == 0)
-				nk_label(ctx, TextFormat("[%d] %s", process.pid, process.name.c_str()), NK_TEXT_LEFT);
+			if (process.type == type) {
+				nk_label(ctx, TextFormat("%d", process.pid), NK_TEXT_CENTERED);
+				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
+				if (nk_button_symbol_label(ctx, NK_SYMBOL_RECT_SOLID, "Suspend", NK_TEXT_RIGHT)) {
+					ControlSocketSendData({PROCESS_SUSPEND, process.pid}, NULL);
+					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+				}
+				if (nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "Resume", NK_TEXT_RIGHT)) {
+					ControlSocketSendData({PROCESS_RESUME, process.pid}, NULL);
+					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+				}
+				if (nk_button_symbol_label(ctx, NK_SYMBOL_X, "Terminate", NK_TEXT_RIGHT)) {
+					ControlSocketSendData({PROCESS_KILL, process.pid}, NULL);
+					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+				}
+			}
 		}
-	} else show_processes = 0;
+	} else current_view = VIEW_NONE;
 	nk_end(ctx);
 }
 
@@ -80,15 +118,20 @@ void UpdateFrame() {
 	PanelView(ctx);
 
 	double time = GetTime();
-	if (time - last_processes_get_time >= 5) { //5 seconds
-		if (show_applications || show_processes) {
+	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
+		if (current_view == VIEW_APP || current_view == VIEW_PROCESS) {
 			processes = ControlSocketGetProcesses();
 			last_processes_get_time = time;
 		}
 	}
-	if (show_applications) ApplicationsView(ctx);
-	if (show_processes) ProcessesView(ctx);
-
+	switch (current_view) {
+		case VIEW_APP:
+			ProcessesView(ctx, 1);
+			break;
+		case VIEW_PROCESS:
+			ProcessesView(ctx, 0);
+			break;
+	}
 
 	//Get mouse location and whether mouse image has changed
 	if (ScreenSocketGetMouseInfo(&mouse_x, &mouse_y)) {

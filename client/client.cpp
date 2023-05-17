@@ -84,10 +84,12 @@ void ControlSocketClose() {
 	control_socket.close();
 }
 
-void ControlSocketSendData(uint16_t opcode, int size, void *data) {
-	ControlBuffer buf = {opcode, size};
+void ControlSocketSendData(ControlBuffer ctrlBuf, void *data) {
 	asio::error_code error;
-	asio::write(control_socket, asio::buffer(&buf, sizeof(buf)), error);
+	asio::write(control_socket, asio::buffer(&ctrlBuf, sizeof(ctrlBuf)), error);
+	if (data) {
+		asio::write(control_socket, asio::buffer(data, ctrlBuf.data), error);
+	}
 }
 
 void ControlSocketGetData(void *data, int size) {
@@ -106,7 +108,7 @@ std::string ControlSocketGetString() {
 }
 
 std::vector<ProcessInfo> ControlSocketGetProcesses() {
-	ControlSocketSendData(PROCESS_LIST, 0, NULL);
+	ControlSocketSendData({PROCESS_LIST, 0}, NULL);
 	ControlBuffer buf;
 	ControlSocketGetData(&buf, sizeof(buf));
 	if (buf.opcode != PROCESS_LIST) return {};
@@ -115,11 +117,11 @@ std::vector<ProcessInfo> ControlSocketGetProcesses() {
 		ControlSocketGetData(&process.pid, sizeof(int));
 		process.name = ControlSocketGetString();
 		ControlSocketGetData(&process.type, sizeof(char));
-		if (process.type == 1)
-			std::cout << "Application: ";
-		else
-			std::cout << "Process: ";
-		std::cout << process.name << " | PID: " << process.pid << std::endl;
+		// if (process.type == 1)
+		// 	std::cout << "Application: ";
+		// else
+		// 	std::cout << "Process: ";
+		// std::cout << process.name << " | PID: " << process.pid << std::endl;
 	}
 	return processes;
 }

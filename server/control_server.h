@@ -58,7 +58,15 @@ private:
 					}
 					break;
 				}
-
+				case PROCESS_SUSPEND:
+					suspend_process(buf.data);
+					break;
+				case PROCESS_RESUME:
+					resume_process(buf.data);
+					break;
+				case PROCESS_KILL:
+					terminate_process(buf.data);
+					break;
 			}
 			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
 				std::bind(&ControlConnection::handle_read, shared_from_this(),
