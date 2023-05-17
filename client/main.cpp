@@ -40,25 +40,6 @@ Shader shader = {0};
 #define PROCESS_FETCH_INTERVAL 5
 double last_processes_get_time = -PROCESS_FETCH_INTERVAL; //seconds
 
-void PanelView(nk_context *ctx) {
-	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
-		nk_layout_row_dynamic(ctx, 30, 4);
-		if (nk_button_label(ctx, "Applications")) {
-			current_view = VIEW_APP;
-		}
-		if (nk_button_label(ctx, "Procceses")) {
-			current_view = VIEW_PROCESS;
-		}
-		if (nk_button_label(ctx, "Files")) {
-			current_view = VIEW_DIRECTORY;
-		}
-		if (nk_button_label(ctx, "Settings")) {
-			current_view = VIEW_SETTINGS;
-		}
-	}
-	nk_end(ctx);
-}
-
 int view_begin(const char *name) {
 	const int pad_x = 50;
 	const int pad_y = 50;
@@ -68,8 +49,8 @@ int view_begin(const char *name) {
 }
 
 void ProcessesView(nk_context *ctx, char type) {
-	const int pid_size = 50;
-	const int button_size = 100;
+	const int pid_size = 60;
+	const int button_size = 130;
 	const char *window_name[] = {"Procceses", "Applications"};
 	if (view_begin(window_name[type])) {
 		//Header
@@ -113,9 +94,24 @@ void ProcessesView(nk_context *ctx, char type) {
 	nk_end(ctx);
 }
 
-void UpdateFrame() {
+void NuklearView(nk_context *ctx) {
 	UpdateNuklear(ctx);
-	PanelView(ctx);
+	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
+		nk_layout_row_dynamic(ctx, 30, 4);
+		if (nk_button_label(ctx, "Applications")) {
+			current_view = VIEW_APP;
+		}
+		if (nk_button_label(ctx, "Procceses")) {
+			current_view = VIEW_PROCESS;
+		}
+		if (nk_button_label(ctx, "Files")) {
+			current_view = VIEW_DIRECTORY;
+		}
+		if (nk_button_label(ctx, "Settings")) {
+			current_view = VIEW_SETTINGS;
+		}
+	}
+	nk_end(ctx);
 
 	double time = GetTime();
 	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
@@ -131,7 +127,15 @@ void UpdateFrame() {
 		case VIEW_PROCESS:
 			ProcessesView(ctx, 0);
 			break;
+		case VIEW_DIRECTORY:
+			break;
+		case VIEW_SETTINGS:
+			break;
 	}
+}
+
+void UpdateFrame() {
+	NuklearView(ctx);
 
 	//Get mouse location and whether mouse image has changed
 	if (ScreenSocketGetMouseInfo(&mouse_x, &mouse_y)) {
@@ -188,7 +192,8 @@ int main(void) {
 	SetExitKey(0); //Prevent app from closing when pressing ESC key
 
 	//Nuklear GUI Init
-	ctx = InitNuklear(10);
+	Font font = LoadFontEx("Roboto-Medium.ttf", 16, NULL, 0);
+	ctx = InitNuklearEx(font, 16);
 
 	//Screen texture Init
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
@@ -215,6 +220,7 @@ int main(void) {
 
 	//Free resources
 	UnloadNuklear(ctx);
+	UnloadFont(font);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	//ScreenSocketClose();
