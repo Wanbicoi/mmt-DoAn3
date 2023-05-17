@@ -14,7 +14,11 @@
 
 #define PANEL_SIZE 38
 
+#define MOUSE_NONE -2
+#define MOUSE_HOVER -1
+
 nk_context *ctx = NULL;
+int mouse_interacting_nuklear = MOUSE_NONE;
 enum View {
 	VIEW_NONE = 0,
 	VIEW_APP,
@@ -33,6 +37,7 @@ Image screen_image = {0};
 
 int mouse_x, mouse_y, mouse_width, mouse_height;
 Texture2D mouse_texture = {0};
+bool mouse_was_down[3] = {0};
 
 Camera2D camera = {0};
 Shader shader = {0};
@@ -90,7 +95,9 @@ void ProcessesView(nk_context *ctx, char type) {
 				}
 			}
 		}
-	} else current_view = VIEW_NONE;
+	} else {
+		current_view = VIEW_NONE;
+	}
 	nk_end(ctx);
 }
 
@@ -166,6 +173,43 @@ void UpdateFrame() {
 		camera.offset.y = ((GetScreenHeight() - PANEL_SIZE) - camera.zoom * screen_image.height) / 2 + PANEL_SIZE;
 	}
 
+	const int mouse_type[] = {MOUSE_LEFT_BUTTON, MOUSE_MIDDLE_BUTTON, MOUSE_RIGHT_BUTTON};
+	const OperationCode mouse_op_down[] = {MOUSE_LEFT_DOWN, MOUSE_MIDDLE_DOWN, MOUSE_RIGHT_DOWN};
+	const OperationCode mouse_op_up[] = {MOUSE_LEFT_UP, MOUSE_MIDDLE_UP, MOUSE_RIGHT_UP};
+
+	if (nk_item_is_any_active(ctx)) { //Nuklear element is interacted/hovered
+		//Interact
+		for (int i = 0; i < 3; i++) {
+			if (IsMouseButtonPressed(mouse_type[i]))
+				mouse_interacting_nuklear = mouse_type[i];
+		}
+		//Hover
+		if (mouse_interacting_nuklear == MOUSE_NONE)
+			mouse_interacting_nuklear = MOUSE_HOVER;
+	}
+	else { //Outside nuklear, except for dragable widget interaction
+		if (mouse_interacting_nuklear < 0 /*NONE and HOVER*/ ||  /*short circuiting*/ IsMouseButtonUp(mouse_interacting_nuklear)) {
+			mouse_interacting_nuklear = MOUSE_NONE;
+		}
+	}
+
+	//Mouse input
+	Vector2 mouse = GetScreenToWorld2D(GetMousePosition(), camera);
+	if (mouse.x >= 0 && mouse.x <= screen_image.width && mouse.y >= 0 && mouse.y <= screen_image.height) { //Inside view bound
+		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
+			for (int i = 0; i < 3; i++) {
+				if (IsMouseButtonPressed(mouse_type[i])) {
+					ControlSocketSendData({mouse_op_down[i], 0}, NULL);
+					mouse_was_down[i] = 1;
+				}
+				if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
+					ControlSocketSendData({mouse_op_up[i], 0}, NULL);
+					mouse_was_down[i] = 0;
+				}
+			}
+		}
+	}
+
 	BeginDrawing();
 		ClearBackground(GRAY);
 		BeginMode2D(camera);
@@ -175,7 +219,8 @@ void UpdateFrame() {
 			EndShaderMode();
 		EndMode2D();
 		DrawNuklear(ctx);
-		DrawFPS(10, GetScreenHeight() - 20);
+		//DrawFPS(10, GetScreenHeight() - 20);
+		DrawText(TextFormat("%d", mouse_interacting_nuklear), 10, GetScreenHeight() - 20, 20, GREEN);
 	EndDrawing();
 }
 
@@ -192,8 +237,9 @@ int main(void) {
 	SetExitKey(0); //Prevent app from closing when pressing ESC key
 
 	//Nuklear GUI Init
-	Font font = LoadFontEx("Roboto-Medium.ttf", 16, NULL, 0);
-	ctx = InitNuklearEx(font, 16);
+	const int fontSize = 16;
+	Font font = LoadFontEx("Roboto-Medium.ttf", fontSize, NULL, 0);
+	ctx = InitNuklearEx(font, fontSize);
 
 	//Screen texture Init
 	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);

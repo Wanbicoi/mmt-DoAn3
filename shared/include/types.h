@@ -16,7 +16,8 @@ enum OperationCode : uint16_t {
 	//Input: Keyboard
 	KEYBOARD_DOWN,
 	//Input: Mouse
-	MOUSE_MOVE,
+	MOUSE_MOVE_X,
+	MOUSE_MOVE_Y,
 	MOUSE_LEFT_DOWN,
 	MOUSE_LEFT_UP,
 	MOUSE_MIDDLE_DOWN,
