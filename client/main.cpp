@@ -165,12 +165,12 @@ void UpdateFrame() {
 
 	if (IsWindowResized()) {
 		//Calculate new zoom so the screen view is contained and centered by the window
-		if ((GetScreenWidth()) / (float) (GetScreenHeight() - PANEL_SIZE) < screen_image.width / (float)screen_image.height)
-			camera.zoom = (float) (GetScreenWidth()) / screen_image.width;
+		if ((GetScreenWidth()) / (float) (GetScreenHeight() - PANEL_SIZE) < screen_texture.width / (float)screen_texture.height)
+			camera.zoom = (float) (GetScreenWidth()) / screen_texture.width;
 		else
-			camera.zoom = (float) (GetScreenHeight() - PANEL_SIZE) / screen_image.height;
-		camera.offset.x = ((GetScreenWidth()) - camera.zoom * screen_image.width) / 2;
-		camera.offset.y = ((GetScreenHeight() - PANEL_SIZE) - camera.zoom * screen_image.height) / 2 + PANEL_SIZE;
+			camera.zoom = (float) (GetScreenHeight() - PANEL_SIZE) / screen_texture.height;
+		camera.offset.x = ((GetScreenWidth()) - camera.zoom * screen_texture.width) / 2;
+		camera.offset.y = ((GetScreenHeight() - PANEL_SIZE) - camera.zoom * screen_texture.height) / 2 + PANEL_SIZE;
 	}
 
 	const int mouse_type[] = {MOUSE_LEFT_BUTTON, MOUSE_MIDDLE_BUTTON, MOUSE_RIGHT_BUTTON};
@@ -195,12 +195,12 @@ void UpdateFrame() {
 
 	//Mouse input
 	Vector2 mouse = GetScreenToWorld2D(GetMousePosition(), camera);
-	if (mouse.x >= 0 && mouse.x <= screen_image.width && mouse.y >= 0 && mouse.y <= screen_image.height) { //Inside view bound
+	if (mouse.x >= 0 && mouse.x <= screen_texture.width && mouse.y >= 0 && mouse.y <= screen_texture.height) { //Inside view bound
 		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
 			for (int i = 0; i < 3; i++) {
 				if (IsMouseButtonPressed(mouse_type[i])) {
 					std::cout << mouse.x << " | " << mouse.y << std::endl;
-					MousePosition mp = {mouse.x, mouse.y, screen_image.width, screen_image.height};
+					MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
 					ControlSocketSendControl(MOUSE_MOVE, sizeof(mp), &mp);
 					ControlSocketSendControl(mouse_op_down[i]);
 					mouse_was_down[i] = 1;
@@ -272,6 +272,7 @@ int main(void) {
 	UnloadFont(font);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
+	UnloadTexture(mouse_texture);
 	//ScreenSocketClose();
 	//ControlSocketClose();
 	CloseAudioDevice();
