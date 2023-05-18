@@ -40,13 +40,6 @@ struct ScreenInfo {
 	int height;
 };
 
-struct MouseImage {
-	void *data;
-	int width;
-	int height;
-	int size;
-};
-
 struct MousePosition {
 	float x;
 	float y;
@@ -54,13 +47,16 @@ struct MousePosition {
 	int height;
 };
 
-struct ScreenBuffer {
-	void *screen;
-	int screen_size;
+struct FrameBuffer {
 	int mouse_x;
 	int mouse_y;
 	int mouse_changed;
-	MouseImage mouse_image;
+	int mouse_width;
+	int mouse_height;
+	int mouse_size;
+	void *mouse_data;
+	int screen_size;
+	void *screen_data;
 };
 
 struct ControlBuffer {

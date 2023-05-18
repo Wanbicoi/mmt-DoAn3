@@ -10,7 +10,7 @@ class ScreenConnection : public std::enable_shared_from_this<ScreenConnection> {
 public:
 	typedef std::shared_ptr<ScreenConnection> pointer;
 
-	static pointer create(asio::io_context& io_context, const ScreenInfo info, const std::function<ScreenBuffer()> &callback) {
+	static pointer create(asio::io_context& io_context, const ScreenInfo info, const std::function<FrameBuffer()> &callback) {
 		return pointer(new ScreenConnection(io_context, info, callback));
 	}
 
@@ -25,32 +25,32 @@ public:
 	}
 
 private:
-	ScreenConnection(asio::io_context& io_context, const ScreenInfo info, const std::function<ScreenBuffer()> &callback)
+	ScreenConnection(asio::io_context& io_context, const ScreenInfo info, const std::function<FrameBuffer()> &callback)
 	: socket_(io_context)
 	, info_(info)
 	, callback_(callback) {}
 
 	void handle_write(asio::error_code error) {
 		if (!error) {
-			ScreenBuffer buffer = callback_();
+			FrameBuffer buffer = callback_();
 			asio::write(socket_, asio::buffer(&buffer.mouse_x, sizeof(int)));
 			asio::write(socket_, asio::buffer(&buffer.mouse_y, sizeof(int)));
 			asio::write(socket_, asio::buffer(&buffer.mouse_changed, sizeof(int)));
 			if (buffer.mouse_changed) {
-				asio::write(socket_, asio::buffer(&buffer.mouse_image.width, sizeof(int)));
-				asio::write(socket_, asio::buffer(&buffer.mouse_image.height, sizeof(int)));
-				asio::write(socket_, asio::buffer(&buffer.mouse_image.size, sizeof(int)));
-				asio::write(socket_, asio::buffer(buffer.mouse_image.data, buffer.mouse_image.size));
+				asio::write(socket_, asio::buffer(&buffer.mouse_width, sizeof(int)));
+				asio::write(socket_, asio::buffer(&buffer.mouse_height, sizeof(int)));
+				asio::write(socket_, asio::buffer(&buffer.mouse_size, sizeof(int)));
+				asio::write(socket_, asio::buffer(buffer.mouse_data, buffer.mouse_size));
 			}
 			asio::write(socket_, asio::buffer(&buffer.screen_size, sizeof(int)));
-			asio::async_write(socket_, asio::buffer(buffer.screen, buffer.screen_size),
+			asio::async_write(socket_, asio::buffer(buffer.screen_data, buffer.screen_size),
 				std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
 		}
 	}
 
 	tcp::socket socket_;
 	const ScreenInfo info_;
-	const std::function<ScreenBuffer()> callback_;
+	const std::function<FrameBuffer()> callback_;
 	void *data_;
 	size_t data_size_;
 };
@@ -58,7 +58,7 @@ private:
 
 class ScreenServer {
 public:
-	ScreenServer(asio::io_context& io_context, const ScreenInfo info, const std::function<ScreenBuffer()> &callback)
+	ScreenServer(asio::io_context& io_context, const ScreenInfo info, const std::function<FrameBuffer()> &callback)
 		: io_context_(io_context)
 		, acceptor_(io_context, tcp::endpoint(tcp::v4(), SOCKET_SCREEN_PORT))
 		, info_(info)
@@ -84,5 +84,5 @@ private:
 	asio::io_context& io_context_;
 	tcp::acceptor acceptor_;
 	ScreenInfo info_;
-	const std::function<ScreenBuffer()> callback_;
+	const std::function<FrameBuffer()> callback_;
 };

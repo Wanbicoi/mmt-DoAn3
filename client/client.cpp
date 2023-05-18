@@ -1,5 +1,6 @@
 #include <iostream>
 #include <asio.hpp>
+#include <functional>
 #include "types.h"
 #include "client.h"
 using asio::ip::tcp;
@@ -30,6 +31,10 @@ void ScreenSocketConnect(const char *address) {
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 	}
+}
+
+void void_read() {
+
 }
 
 void ScreenSocketGetScreen(void *data) {

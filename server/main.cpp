@@ -93,19 +93,19 @@ int main() {
 		}
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
-			ScreenBuffer buf;
-			buf.screen = imgbuffer.get();
-			buf.screen_size = imgbuffersize;
+			FrameBuffer buf;
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouseimgchanged;
 			mouseimgchanged = false;
 			if (buf.mouse_changed) {
-				buf.mouse_image.data = mouseimgbuffer;
-				buf.mouse_image.width = mouse_width;
-				buf.mouse_image.height = mouse_height;
-				buf.mouse_image.size = mouse_width * mouse_height * 4;
+				buf.mouse_width = mouse_width;
+				buf.mouse_height = mouse_height;
+				buf.mouse_size = mouse_width * mouse_height * 4;
+				buf.mouse_data = mouseimgbuffer;
 			}
+			buf.screen_size = imgbuffersize;
+			buf.screen_data = imgbuffer.get();
 			return buf;
 		});
 		ControlServer control_server(io_context, [&]() {
