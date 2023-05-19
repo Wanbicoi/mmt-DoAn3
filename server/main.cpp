@@ -8,59 +8,39 @@
 #include "control_server.h"
 using asio::ip::tcp;
 
-void ExtractAndConvertToRGBA(const SL::Screen_Capture::Image &img, unsigned char *dst, size_t dst_size) {
-	assert(dst_size >= static_cast<size_t>(SL::Screen_Capture::Width(img) * SL::Screen_Capture::Height(img) * sizeof(SL::Screen_Capture::ImageBGRA)));
-	auto imgsrc = StartSrc(img);
-	auto imgdist = dst;
-	if (img.isContiguous) {
-		memcpy(imgdist, imgsrc, dst_size);
-	}
-	else {
-		for (auto h = 0; h < Height(img); h++) {
-			auto startimgsrc = imgsrc;
-			for (auto w = 0; w < Width(img); w++) {
-				*imgdist++ = imgsrc->R;
-				*imgdist++ = imgsrc->G;
-				*imgdist++ = imgsrc->B;
-				*imgdist++ = 0; // alpha should be zero
-				imgsrc++;
-			}
-			imgsrc = SL::Screen_Capture::GotoNextRow(img, startimgsrc);
-		}
-	}
-}
-
 int main() {
 	auto mons = SL::Screen_Capture::GetMonitors();
 	mons.resize(1);
 	auto monitor = mons[0];
-	std::atomic<int> imgbuffersize = monitor.Width * monitor.Height * sizeof(SL::Screen_Capture::ImageBGRA);
-	std::unique_ptr<unsigned char[]> imgbuffer(std::make_unique<unsigned char[]>(imgbuffersize));
-	memset(imgbuffer.get(), 0, imgbuffersize); // create a black image to start with
-	std::atomic<bool> imgbufferchanged = false;
-	std::atomic<bool> mouseimgchanged = false;
+	std::atomic<int> screen_buffer_size = monitor.Width * monitor.Height * sizeof(SL::Screen_Capture::ImageBGRA);
+	std::unique_ptr<unsigned char[]> screen_buffer(std::make_unique<unsigned char[]>(screen_buffer_size));
+	memset(screen_buffer.get(), 0, screen_buffer_size); // create a black image to start with
+	std::atomic<bool> screen_changed = false;
+
+	unsigned char *mouse_buffer = nullptr;
+	std::atomic<bool> mouse_changed = false;
+
 	std::atomic<int> mouse_x = 0;
 	std::atomic<int> mouse_y = 0;
 	std::atomic<int> mouse_width = 0;
 	std::atomic<int> mouse_height = 0;
-	unsigned char *mouseimgbuffer = nullptr;
 
 	auto framgrabber = SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
 		->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
-			imgbufferchanged = true;
-			ExtractAndConvertToRGBA(img, imgbuffer.get(), imgbuffersize);
+			screen_changed = true;
+			memcpy(screen_buffer.get(), StartSrc(img), screen_buffer_size);
 			
 		})
 		->onMouseChanged([&](const SL::Screen_Capture::Image* img, const SL::Screen_Capture::MousePoint &mousepoint) {
 			mouse_x = mousepoint.Position.x;
 			mouse_y = mousepoint.Position.y;
 			if (img) {
-				mouseimgchanged = true;
+				mouse_changed = true;
 				mouse_width = Width(*img);
 				mouse_height = Height(*img);
-				int size = mouse_width * mouse_height * 4;
-				mouseimgbuffer = (unsigned char*)realloc(mouseimgbuffer, size);
-				memcpy(mouseimgbuffer, StartSrc(*img), size);
+				int mouse_buffer_size = mouse_width * mouse_height * 4;
+				mouse_buffer = (unsigned char*)realloc(mouse_buffer, mouse_buffer_size);
+				memcpy(mouse_buffer, StartSrc(*img), mouse_buffer_size);
 			}
 		})
 		->start_capturing();
@@ -96,16 +76,16 @@ int main() {
 			FrameBuffer buf;
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
-			buf.mouse_changed = mouseimgchanged;
-			mouseimgchanged = false;
+			buf.mouse_changed = mouse_changed;
+			mouse_changed = false;
 			if (buf.mouse_changed) {
 				buf.mouse_width = mouse_width;
 				buf.mouse_height = mouse_height;
 				buf.mouse_size = mouse_width * mouse_height * 4;
-				buf.mouse_data = mouseimgbuffer;
+				buf.mouse_data = mouse_buffer;
 			}
-			buf.screen_size = imgbuffersize;
-			buf.screen_data = imgbuffer.get();
+			buf.screen_size = screen_buffer_size;
+			buf.screen_data = screen_buffer.get();
 			return buf;
 		});
 		ControlServer control_server(io_context, [&]() {
@@ -117,7 +97,7 @@ int main() {
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 	}
-	free(mouseimgbuffer);
+	free(mouse_buffer);
 
 	return 0;
 }
