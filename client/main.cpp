@@ -12,6 +12,9 @@
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 540
 
+ScreenClient screen_client;
+ControlClient control_client;
+
 #define PANEL_SIZE 38
 
 #define MOUSE_NONE -2
@@ -49,7 +52,7 @@ int view_begin(const char *name) {
 	const int pad_x = 50;
 	const int pad_y = 50;
 	return nk_begin(ctx, name,
-		nk_rect(pad_x, pad_y, ScreenSocketGetWidth() / 2 - pad_x * 2, ScreenSocketGetHeight() / 2 - pad_y * 2),
+		nk_rect(pad_x, pad_y, screen_client.getWidth() / 2 - pad_x * 2, screen_client.getHeight() / 2 - pad_y * 2),
 		NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE | NK_WINDOW_MOVABLE);
 }
 
@@ -82,15 +85,15 @@ void ProcessesView(nk_context *ctx, char type) {
 				nk_label(ctx, TextFormat("%d", process.pid), NK_TEXT_CENTERED);
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_RECT_SOLID, "Suspend", NK_TEXT_RIGHT)) {
-					ControlSocketSendControl(PROCESS_SUSPEND, process.pid);
+					control_client.sendControl(PROCESS_SUSPEND, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "Resume", NK_TEXT_RIGHT)) {
-					ControlSocketSendControl(PROCESS_RESUME, process.pid);
+					control_client.sendControl(PROCESS_RESUME, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_symbol_label(ctx, NK_SYMBOL_X, "Terminate", NK_TEXT_RIGHT)) {
-					ControlSocketSendControl(PROCESS_KILL, process.pid);
+					control_client.sendControl(PROCESS_KILL, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 			}
@@ -123,7 +126,7 @@ void NuklearView(nk_context *ctx) {
 	double time = GetTime();
 	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
 		if (current_view == VIEW_APP || current_view == VIEW_PROCESS) {
-			processes = ControlSocketGetProcesses();
+			processes = control_client.getProcesses();
 			last_processes_get_time = time;
 		}
 	}
@@ -145,9 +148,9 @@ void UpdateFrame() {
 	NuklearView(ctx);
 
 	//Get mouse location and whether mouse image has changed
-	if (ScreenSocketGetMouseInfo(&mouse_x, &mouse_y)) {
+	if (screen_client.getMouseInfo(&mouse_x, &mouse_y)) {
 		//Mouse image changed
-		unsigned char *mouse_data = ScreenSocketGetMouse(&mouse_width, &mouse_height);
+		unsigned char *mouse_data = screen_client.getMouseData(&mouse_width, &mouse_height);
 		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
 			//Size changed, create new texture
 			UnloadTexture(mouse_texture);
@@ -160,7 +163,7 @@ void UpdateFrame() {
 		UpdateTexture(mouse_texture, mouse_data);
 		free(mouse_data);
 	}
-	ScreenSocketGetScreen(screen_image.data);
+	screen_client.getScreenData(screen_image.data);
 	UpdateTexture(screen_texture, screen_image.data);
 
 	if (IsWindowResized()) {
@@ -201,12 +204,12 @@ void UpdateFrame() {
 				if (IsMouseButtonPressed(mouse_type[i])) {
 					std::cout << mouse.x << " | " << mouse.y << std::endl;
 					MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
-					ControlSocketSendControl(MOUSE_MOVE, sizeof(mp), &mp);
-					ControlSocketSendControl(mouse_op_down[i]);
+					//control_client.sendControl(MOUSE_MOVE, sizeof(mp), &mp);
+					//control_client.sendControl(mouse_op_down[i]);
 					mouse_was_down[i] = 1;
 				}
 				if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
-					ControlSocketSendControl(mouse_op_up[i]);
+					//control_client.sendControl(mouse_op_up[i]);
 					mouse_was_down[i] = 0;
 				}
 			}
@@ -229,8 +232,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	ScreenSocketConnect("192.168.56.1");
-	ControlSocketConnect("192.168.56.1");
+	screen_client.connect("192.168.56.1");
+	control_client.connect("192.168.56.1");
 
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
@@ -245,13 +248,13 @@ int main(void) {
 	ctx = InitNuklearEx(font, fontSize);
 
 	//Screen texture Init
-	screen_image = GenImageColor(ScreenSocketGetWidth(), ScreenSocketGetHeight(), BLANK);
+	screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
 	screen_texture = LoadTextureFromImage(screen_image);
 	SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
 	SetTextureWrap(screen_texture, TEXTURE_WRAP_CLAMP);
 
-	SetWindowMinSize(ScreenSocketGetWidth() / 2, ScreenSocketGetHeight() / 2 + PANEL_SIZE);
-	SetWindowSize(ScreenSocketGetWidth() / 2, ScreenSocketGetHeight() / 2 + PANEL_SIZE);
+	SetWindowMinSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
+	SetWindowSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
 
 	//Mouse texture init
 	Image mouse_image = GenImageColor(32, 32, BLANK);
@@ -273,8 +276,6 @@ int main(void) {
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	UnloadTexture(mouse_texture);
-	//ScreenSocketClose();
-	//ControlSocketClose();
 	CloseAudioDevice();
 	CloseWindow();
 	return 0;

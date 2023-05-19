@@ -2,27 +2,42 @@
 #include <vector>
 #include "types.h"
 
-int ScreenSocketGetWidth();
+class ScreenClient {
+private:
+	ScreenInfo screen_info = {1080, 720};
+public:
+	ScreenClient();
 
-int ScreenSocketGetHeight();
+	void connect(const char *address);
 
-void ScreenSocketConnect(const char *address);
+	int getWidth();
 
-void ScreenSocketGetScreen(void *data);
+	int getHeight();
 
-int ScreenSocketGetMouseInfo(int *mouse_x, int *mouse_y);
+	void getScreenData(void *data);
 
-unsigned char* ScreenSocketGetMouse(int *mouse_width, int *mouse_height);
+	int getMouseInfo(int *mouse_x, int *mouse_y);
 
-void ScreenSocketClose();
+	unsigned char* getMouseData(int *mouse_width, int *mouse_height);
 
-void ControlSocketConnect(const char *address);
+	~ScreenClient();
+};
 
-void ControlSocketClose();
+class ControlClient {
+private:
+	void getData(void *data, int size);
 
-void ControlSocketSendControl(OperationCode opcode, int data = 0, void *raw_data = NULL);
+	std::string getString();
+public:
+	ControlClient();
 
-// template <typename T>
-// void ControlSocketSendType(T obj);
+	void connect(const char *address);
 
-std::vector<ProcessInfo> ControlSocketGetProcesses();
+	void sendControl(OperationCode opcode, int data = 0, void *raw_data = NULL);
+
+	std::vector<ProcessInfo> getProcesses();
+
+	~ControlClient();
+};
+
+void IoContextRun();
