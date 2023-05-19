@@ -1,10 +1,25 @@
 #include <string>
 #include <vector>
+#include <atomic>
+#include <system_error>
 #include "types.h"
 
 class ScreenClient {
 private:
 	ScreenInfo screen_info = {1080, 720};
+
+	unsigned char *screen_data = nullptr;
+	std::atomic<bool> screen_changed = 0;
+
+	unsigned char *mouse_data = nullptr;
+	std::atomic<bool> mouse_changed = 0;
+	std::atomic<int> mouse_x = 0;
+	std::atomic<int> mouse_y = 0;
+	std::atomic<int> mouse_width = 0;
+	std::atomic<int> mouse_height = 0;
+
+
+	void handleRead(std::error_code error);
 public:
 	ScreenClient();
 
@@ -14,11 +29,15 @@ public:
 
 	int getHeight();
 
-	void getScreenData(void *data);
+	bool isFrameChanged();
 
-	int getMouseInfo(int *mouse_x, int *mouse_y);
+	bool isMouseImgChanged();
 
-	unsigned char* getMouseData(int *mouse_width, int *mouse_height);
+	unsigned char* getScreenData();
+
+	void getMouseInfo(int *x, int *y);
+
+	unsigned char* getMouseData(int *width, int *height);
 
 	~ScreenClient();
 };

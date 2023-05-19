@@ -8,6 +8,7 @@
 #include "types.h"
 #include "client.h"
 #include <iostream>
+#include <thread>
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 540
@@ -148,23 +149,24 @@ void UpdateFrame() {
 	NuklearView(ctx);
 
 	//Get mouse location and whether mouse image has changed
-	if (screen_client.getMouseInfo(&mouse_x, &mouse_y)) {
-		//Mouse image changed
-		unsigned char *mouse_data = screen_client.getMouseData(&mouse_width, &mouse_height);
-		if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
-			//Size changed, create new texture
-			UnloadTexture(mouse_texture);
-			Image mouse_image = GenImageColor(mouse_width, mouse_height, BLANK);
-			mouse_texture = LoadTextureFromImage(mouse_image);
-			UnloadImage(mouse_image);
-			SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
-			SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
+	if (screen_client.isFrameChanged()) {
+		screen_client.getMouseInfo(&mouse_x, &mouse_y);
+		if (1 || screen_client.isMouseImgChanged()) { //Race condition, but seem cheap
+			unsigned char *mouse_data = screen_client.getMouseData(&mouse_width, &mouse_height);
+			if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
+				//Size changed, create new texture
+				UnloadTexture(mouse_texture);
+				Image mouse_image = GenImageColor(mouse_width, mouse_height, BLANK);
+				mouse_texture = LoadTextureFromImage(mouse_image);
+				UnloadImage(mouse_image);
+				SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
+				SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
+			}
+			UpdateTexture(mouse_texture, mouse_data);
 		}
-		UpdateTexture(mouse_texture, mouse_data);
-		free(mouse_data);
+		unsigned char *screen_data = screen_client.getScreenData();
+		UpdateTexture(screen_texture, screen_data);
 	}
-	screen_client.getScreenData(screen_image.data);
-	UpdateTexture(screen_texture, screen_image.data);
 
 	if (IsWindowResized()) {
 		//Calculate new zoom so the screen view is contained and centered by the window
@@ -234,6 +236,7 @@ int main(void) {
 	//Socket connect
 	screen_client.connect("192.168.56.1");
 	control_client.connect("192.168.56.1");
+	std::thread socket_thread(IoContextRun);
 
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
@@ -270,6 +273,7 @@ int main(void) {
 		UpdateFrame();
 	}
 
+	socket_thread.detach();
 	//Free resources
 	UnloadNuklear(ctx);
 	UnloadFont(font);

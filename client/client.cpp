@@ -13,6 +13,33 @@ ScreenClient::ScreenClient() {
 
 }
 
+void ScreenClient::handleRead(std::error_code error) {
+	if (!error) {
+		asio::error_code ignored_error;
+		screen_changed = 1;
+		asio::read(screen_socket, asio::buffer(&mouse_x, sizeof(int)), ignored_error);
+		asio::read(screen_socket, asio::buffer(&mouse_y, sizeof(int)), ignored_error);
+		asio::read(screen_socket, asio::buffer(&mouse_changed, sizeof(int)), ignored_error);
+		if (mouse_changed) {
+			int old_mouse_size = mouse_width * mouse_height * 4;
+			asio::read(screen_socket, asio::buffer(&mouse_width, sizeof(int)), ignored_error);
+			asio::read(screen_socket, asio::buffer(&mouse_height, sizeof(int)), ignored_error);
+			int mouse_size = 0;
+			asio::read(screen_socket, asio::buffer(&mouse_size, sizeof(int)), ignored_error);
+			if (old_mouse_size != mouse_size)
+				mouse_data = (unsigned char*)realloc(mouse_data, mouse_size);
+			asio::read(screen_socket, asio::buffer(mouse_data, mouse_size), ignored_error);
+		}
+		int screen_size;
+		asio::read(screen_socket, asio::buffer(&screen_size, sizeof(int)), ignored_error);
+		asio::read(screen_socket, asio::buffer(screen_data, screen_size), ignored_error);
+		int dummy;
+		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
+			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
+	}
+
+}
+
 void ScreenClient::connect(const char *address) {
 	try {
 		std::string raw_ip_address(address);
@@ -21,6 +48,13 @@ void ScreenClient::connect(const char *address) {
 
 		screen_socket.connect(ep);
 		asio::read(screen_socket, asio::buffer(&screen_info, sizeof(ScreenInfo)));
+
+		screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
+		mouse_data = (unsigned char*)malloc(32 * 32 * 4);
+
+		int dummy;
+		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
+			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
@@ -35,34 +69,34 @@ int ScreenClient::getHeight() {
 	return screen_info.height;
 }
 
-void ScreenClient::getScreenData(void *data) {
-	asio::error_code error;
-	int size;
-	asio::read(screen_socket, asio::buffer(&size, sizeof(int)), error);
-	asio::read(screen_socket, asio::buffer(data, size), error);
+bool ScreenClient::isFrameChanged() {
+	bool changed = screen_changed;
+	screen_changed = 0;
+	return changed;
 }
 
-int ScreenClient::getMouseInfo(int *mouse_x, int *mouse_y) {
-	asio::error_code error;
-	int mouse_changed = 0;
-	asio::read(screen_socket, asio::buffer(mouse_x, sizeof(int)), error);
-	asio::read(screen_socket, asio::buffer(mouse_y, sizeof(int)), error);
-	asio::read(screen_socket, asio::buffer(&mouse_changed, sizeof(int)), error);
+bool ScreenClient::isMouseImgChanged() {
 	return mouse_changed;
 }
 
-unsigned char* ScreenClient::getMouseData(int *mouse_width, int *mouse_height) {
-	asio::error_code error;
-	asio::read(screen_socket, asio::buffer(mouse_width, sizeof(int)), error);
-	asio::read(screen_socket, asio::buffer(mouse_height, sizeof(int)), error);
-	int size;
-	asio::read(screen_socket, asio::buffer(&size, sizeof(int)), error);
-	unsigned char *data = (unsigned char*)malloc(size);
-	asio::read(screen_socket, asio::buffer(data, size), error);
-	return data;
+unsigned char* ScreenClient::getScreenData() {
+	return screen_data;
+}
+
+void ScreenClient::getMouseInfo(int *x, int *y) {
+	*x = mouse_x;
+	*y = mouse_y;
+}
+
+unsigned char* ScreenClient::getMouseData(int *width, int *height) {
+	*width = mouse_width;
+	*height = mouse_height;
+	return mouse_data;
 }
 
 ScreenClient::~ScreenClient() {
+	free(screen_data);
+	free(mouse_data);
 	//screen_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
 	//screen_socket.close();
 }
