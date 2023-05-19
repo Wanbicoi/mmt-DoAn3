@@ -5,17 +5,17 @@
 #include "client.h"
 using asio::ip::tcp;
 
-int screen_width = 1920, screen_height = 1080;
+ScreenInfo screen_info = {1080, 720};
 asio::io_context io_context;
 tcp::socket screen_socket(io_context);
 tcp::socket control_socket(io_context);
 
 int ScreenSocketGetWidth() {
-	return screen_width;
+	return screen_info.width;
 }
 
 int ScreenSocketGetHeight() {
-	return screen_height;
+	return screen_info.height;
 }
 
 void ScreenSocketConnect(const char *address) {
@@ -25,8 +25,7 @@ void ScreenSocketConnect(const char *address) {
 		screen_socket = tcp::socket(io_context, ep.protocol());
 
 		screen_socket.connect(ep);
-		asio::read(screen_socket, asio::buffer(&screen_width, sizeof(int)));
-		asio::read(screen_socket, asio::buffer(&screen_height, sizeof(int)));
+		asio::read(screen_socket, asio::buffer(&screen_info, sizeof(ScreenInfo)));
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
