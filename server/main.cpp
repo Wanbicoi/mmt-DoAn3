@@ -17,6 +17,7 @@ int main() {
 	memset(screen_buffer.get(), 0, screen_buffer_size); // create a black image to start with
 	std::atomic<bool> screen_changed = false;
 
+	std::atomic<int> mouse_buffer_size = 32 * 32 * 4;
 	unsigned char *mouse_buffer = nullptr;
 	std::atomic<bool> mouse_changed = false;
 
@@ -42,7 +43,7 @@ int main() {
 				mouse_height = Height(*img);
 				mouse_center_x = mousepoint.HotSpot.x;
 				mouse_center_y = mousepoint.HotSpot.y;
-				int mouse_buffer_size = mouse_width * mouse_height * 4;
+				mouse_buffer_size = mouse_width * mouse_height * 4;
 				mouse_buffer = (unsigned char*)realloc(mouse_buffer, mouse_buffer_size);
 				memcpy(mouse_buffer, StartSrc(*img), mouse_buffer_size);
 			}
@@ -87,7 +88,7 @@ int main() {
 				buf.mouse_height = mouse_height;
 				buf.mouse_center_x = mouse_center_x;
 				buf.mouse_center_y = mouse_center_y;
-				buf.mouse_size = mouse_width * mouse_height * 4;
+				buf.mouse_size = mouse_buffer_size;
 				buf.mouse_data = mouse_buffer;
 			}
 			buf.screen_changed = screen_changed;
