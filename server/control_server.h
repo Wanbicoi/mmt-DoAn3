@@ -6,6 +6,7 @@
 #include "types.h"
 #include "processes.h"
 #include "input.h"
+#include "fs.h"
 using asio::ip::tcp;
 
 class ControlConnection : public std::enable_shared_from_this<ControlConnection> {
@@ -22,7 +23,7 @@ public:
 
 	template <typename MESSAGE_CALLBACK>
 	void start(const MESSAGE_CALLBACK &callback) {
-		asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
+		asio::async_read(socket_, asio::buffer(&opcode, sizeof(OperationCode)), 
 			std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));
 	}
 
@@ -30,18 +31,26 @@ private:
 	ControlConnection(asio::io_context& io_context) : socket_(io_context) {}
 
 	template <class T>
-	T receive() {
+	T read() {
 		T obj;
 		asio::read(socket_, asio::buffer(&obj, sizeof(obj)));
 		return obj;
 	}
 
-	void send(void *data, int size) {
+	std::string readString() {
+		int size = read<int>();
+		std::string str;
+		str.resize(size);
+		asio::read(socket_, asio::buffer(str, size));
+		return str;
+	}
+
+	void write(void *data, int size) {
 		asio::error_code error;
 		asio::write(socket_, asio::buffer(data, size), error);
 	}
 
-	void send(std::string str) {
+	void write(std::string str) {
 		asio::error_code error;
 		int size = str.size();
 		asio::write(socket_, asio::buffer(&size, sizeof(int)), error);
@@ -50,30 +59,30 @@ private:
 
 	void handle_read(const asio::error_code& error) {
 		if (!error) {
-			std::cout << "Opcode: " << buf.opcode << std::endl;
-			switch (buf.opcode) {
+			std::cout << "Opcode: " << opcode << std::endl;
+			switch (opcode) {
 				case PROCESS_LIST: {
 					auto processes = get_current_processes();
-					buf.data = processes.size();
-					send(&buf, sizeof(buf));
+					int size = processes.size();
+					write(&size, sizeof(int));
 					for (auto &process: processes) {
-						send(&process.pid, sizeof(int));
-						send(process.name);
-						send(&process.type, sizeof(char));
+						write(&process.pid, sizeof(int));
+						write(process.name);
+						write(&process.type, sizeof(char));
 					}
 					break;
 				}
 				case PROCESS_SUSPEND:
-					suspend_process(buf.data);
+					suspend_process(read<int>());
 					break;
 				case PROCESS_RESUME:
-					resume_process(buf.data);
+					resume_process(read<int>());
 					break;
 				case PROCESS_KILL:
-					terminate_process(buf.data);
+					terminate_process(read<int>());
 					break;
 				case MOUSE_MOVE: {
-					MousePosition mp = receive<MousePosition>();
+					MousePosition mp = read<MousePosition>();
 					mouse_move(mp.x, mp.y, mp.width, mp.height);
 					break;
 				}
@@ -93,8 +102,33 @@ private:
 					break;
 				case MOUSE_WHEEL_H:
 					break;
+				case FS_INIT: {
+					write(filesystem_get_default_location());
+					break;
+				}
+				case FS_LIST: {
+					std::string path = readString();
+					auto files_list = filesystem_list(path);
+					int size = files_list.size();
+					write(&size, sizeof(int));
+					for (auto &entry: files_list) {
+						write(entry.name);
+						write(&entry.type, sizeof(char));
+					}
+					break;
+				}
+				case FS_COPY:
+					break;
+				case FS_MOVE:
+					break;
+				case FS_WRITE:
+					break;
+				case FS_ASK_OPTION:
+					break;
+				case FS_DELETE:
+					break;
 			}
-			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
+			asio::async_read(socket_, asio::buffer(&opcode, sizeof(OperationCode)), 
 				std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));
 		}
 	}
@@ -110,7 +144,7 @@ private:
 	tcp::socket socket_;
 	int mouse_x = 0;
 	int mouse_y = 0;
-	ControlBuffer buf;
+	OperationCode opcode;
 };
 
 

@@ -30,7 +30,7 @@ private:
 	, info_(info)
 	, callback_(callback) {}
 
-	void send(void *data, int size) {
+	void write(void *data, int size) {
 		asio::error_code error;
 		asio::write(socket_, asio::buffer(data, size), error);
 	}
@@ -38,20 +38,21 @@ private:
 	void handle_write(asio::error_code error) {
 		if (!error) {
 			FrameBuffer buffer = callback_();
-			send(&buffer.mouse_x, sizeof(int));
-			send(&buffer.mouse_y, sizeof(int));
-			send(&buffer.mouse_changed, sizeof(int));
+			write(&buffer.mouse_x, sizeof(int));
+			write(&buffer.mouse_y, sizeof(int));
+			write(&buffer.mouse_changed, sizeof(int));
 			if (buffer.mouse_changed) {
-				send(&buffer.mouse_width, sizeof(int));
-				send(&buffer.mouse_height, sizeof(int));
-				send(&buffer.mouse_center_x, sizeof(int));
-				send(&buffer.mouse_center_y, sizeof(int));
-				send(&buffer.mouse_size, sizeof(int));
-				send(buffer.mouse_data, buffer.mouse_size);
+				write(&buffer.mouse_width, sizeof(int));
+				write(&buffer.mouse_height, sizeof(int));
+				write(&buffer.mouse_center_x, sizeof(int));
+				write(&buffer.mouse_center_y, sizeof(int));
+				write(&buffer.mouse_size, sizeof(int));
+				write(buffer.mouse_data, buffer.mouse_size);
 			}
-			send(&buffer.screen_size, sizeof(int));
-			asio::async_write(socket_, asio::buffer(buffer.screen_data, buffer.screen_size),
-				std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+			write(&buffer.screen_size, sizeof(int));
+			write(buffer.screen_data, buffer.screen_size);
+			int dummy;
+			asio::async_write(socket_, asio::buffer(&dummy, 0), std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
 		}
 	}
 

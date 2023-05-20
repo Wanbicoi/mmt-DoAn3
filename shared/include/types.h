@@ -62,13 +62,13 @@ struct FrameBuffer {
 	void *screen_data;
 };
 
-struct ControlBuffer {
-	uint16_t opcode;
-	int data;
-};
-
 struct ProcessInfo {
 	int pid;
+	std::string name;
+	char type;
+};
+
+struct FileInfo {
 	std::string name;
 	char type;
 };

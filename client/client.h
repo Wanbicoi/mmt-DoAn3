@@ -57,7 +57,13 @@ private:
 
 	void getData(void *data, int size);
 
-	std::string getString();
+	void getString(std::string *str);
+
+	void sendData(void *data, int size);
+
+	void sendString(std::string str);
+
+	void sendControl(OperationCode opcode);
 public:
 	ControlClient();
 
@@ -65,9 +71,17 @@ public:
 
 	bool isConnected();
 
-	void sendControl(OperationCode opcode, int data = 0, void *raw_data = NULL);
+	void suspendProcess(int pid);
+
+	void resumeProcess(int pid);
+
+	void terminateProcess(int pid);
 
 	std::vector<ProcessInfo> getProcesses();
+
+	std::string getDefaultLocation();
+
+	std::vector<FileInfo> listDir(std::string path);
 
 	~ControlClient();
 };

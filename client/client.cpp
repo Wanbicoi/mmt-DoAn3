@@ -132,14 +132,28 @@ void ControlClient::getData(void *data, int size) {
 	asio::read(control_socket, asio::buffer(data, size), error);
 }
 
-std::string ControlClient::getString() {
+void ControlClient::getString(std::string *str) {
 	asio::error_code error;
-	std::string res;
 	int size;
 	asio::read(control_socket, asio::buffer(&size, sizeof(int)), error);
-	res.resize(size);
-	asio::read(control_socket, asio::buffer(res, size), error);
-	return res;
+	str->resize(size);
+	asio::read(control_socket, asio::buffer(*str, size), error);
+}
+
+void ControlClient::sendData(void *data, int size) {
+	asio::error_code error;
+	asio::write(control_socket, asio::buffer(data, size), error);
+}
+
+void ControlClient::sendString(std::string str) {
+	asio::error_code error;
+	int size = str.size();
+	asio::write(control_socket, asio::buffer(&size, sizeof(int)), error);
+	asio::write(control_socket, asio::buffer(str, size), error);
+}
+
+void ControlClient::sendControl(OperationCode opcode) {
+	sendData(&opcode, sizeof(OperationCode));
 }
 
 void ControlClient::connect(const char *address) {
@@ -161,48 +175,64 @@ bool ControlClient::isConnected() {
 	return connected;
 }
 
+void ControlClient::suspendProcess(int pid) {
+	sendControl(PROCESS_SUSPEND);
+	sendData(&pid, sizeof(int));
+}
+
+void ControlClient::resumeProcess(int pid) {
+	sendControl(PROCESS_RESUME);
+	sendData(&pid, sizeof(int));
+}
+
+void ControlClient::terminateProcess(int pid) {
+	sendControl(PROCESS_KILL);
+	sendData(&pid, sizeof(int));
+}
+
+
 void ControlSocketClose() {
 	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
 	control_socket.close();
 }
 
-void ControlClient::sendControl(OperationCode opcode, int data, void *raw_data) {
-	ControlBuffer buf = {opcode, data};
-	asio::error_code error;
-	asio::write(control_socket, asio::buffer(&buf, sizeof(buf)), error);
-	if (raw_data) {
-		asio::write(control_socket, asio::buffer(raw_data, data), error);
-	}
-}
-
 std::vector<ProcessInfo> ControlClient::getProcesses() {
 	sendControl(PROCESS_LIST);
-	ControlBuffer buf;
-	getData(&buf, sizeof(buf));
-	if (buf.opcode != PROCESS_LIST) return {};
-	std::vector<ProcessInfo> processes(buf.data);
+	int size;
+	getData(&size, sizeof(int));
+	std::vector<ProcessInfo> processes(size);
 	for (auto &process: processes) {
 		getData(&process.pid, sizeof(int));
-		process.name = getString();
+		getString(&process.name);
 		getData(&process.type, sizeof(char));
 	}
 	return processes;
+}
+
+std::string ControlClient::getDefaultLocation() {
+	sendControl(FS_INIT);
+	std::string res;
+	getString(&res);
+	return res;
+}
+
+std::vector<FileInfo> ControlClient::listDir(std::string path) {
+	sendControl(FS_LIST);
+	sendString(path);
+	int size;
+	getData(&size, sizeof(int));
+	std::vector<FileInfo> files_list(size);
+	for (auto &entry: files_list) {
+		getString(&entry.name);
+		getData(&entry.type, sizeof(char));
+	}
+	return files_list;
 }
 
 ControlClient::~ControlClient() {
 	//control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
 	//control_socket.close();
 }
-
-// template <typename T>
-// void ControlClient::sendType(T obj) {
-// 	asio::error_code error;
-// 	asio::write(control_socket, asio::buffer(&obj, sizeof(obj)), error);
-// }
-
-// template void ControlSocketSendType<int>(int);
-// template void ControlSocketSendType<float>(float);
-
 
 void IoContextRun() {
 	io_context.run();

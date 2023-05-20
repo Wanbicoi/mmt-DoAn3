@@ -17,9 +17,11 @@ ScreenClient screen_client;
 ControlClient control_client;
 
 #define PANEL_SIZE 38
+#define UI_LINE_HEIGHT 30
 
 #define MOUSE_NONE -2
 #define MOUSE_HOVER -1
+
 
 nk_context *ctx = NULL;
 int mouse_interacting_nuklear = MOUSE_NONE;
@@ -31,12 +33,15 @@ enum View {
 	VIEW_SETTINGS,
 };
 
-struct nk_image pause_img, play_img, stop_img;
+struct nk_image pause_img, play_img, stop_img, file_img, folder_img;
 
 View current_view = VIEW_NONE;
 
 std::string current_dir = "";
+std::vector<FileInfo> files_list;
 std::vector<ProcessInfo> processes;
+#define FILELIST_FETCH_INTERVAL 5
+double last_files_get_time = -FILELIST_FETCH_INTERVAL; //seconds
 
 Texture2D screen_texture = {0};
 Image screen_image = {0};
@@ -60,12 +65,18 @@ int view_begin(const char *name) {
 }
 
 void ProcessesView(nk_context *ctx, char type) {
+	double time = GetTime();
+	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
+		processes = control_client.getProcesses();
+		last_processes_get_time = time;
+	}
+
 	const int pid_size = 60;
 	const int button_size = 130;
 	const char *window_name[] = {"Procceses", "Applications"};
 	if (view_begin(window_name[type])) {
 		//Header
-		nk_layout_row_template_begin(ctx, 30);
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_static(ctx, pid_size);
 		nk_layout_row_template_push_dynamic(ctx);
 		nk_layout_row_template_push_static(ctx, button_size * 3);
@@ -76,7 +87,7 @@ void ProcessesView(nk_context *ctx, char type) {
 		nk_label(ctx, "Action", NK_TEXT_LEFT);
 
 		//Content
-		nk_layout_row_template_begin(ctx, 30);
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_static(ctx, pid_size); //PID fixed width of 50
 		nk_layout_row_template_push_dynamic(ctx); //Name can grow or shrink
 		nk_layout_row_template_push_static(ctx, button_size); //Button
@@ -88,15 +99,15 @@ void ProcessesView(nk_context *ctx, char type) {
 				nk_label(ctx, TextFormat("%d", process.pid), NK_TEXT_CENTERED);
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
 				if (nk_button_image_label(ctx, pause_img, "Suspend", NK_TEXT_RIGHT)) {
-					control_client.sendControl(PROCESS_SUSPEND, process.pid);
+					control_client.suspendProcess(process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_image_label(ctx, play_img, "Resume", NK_TEXT_RIGHT)) {
-					control_client.sendControl(PROCESS_RESUME, process.pid);
+					control_client.resumeProcess(process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_image_label(ctx, stop_img, "Terminate", NK_TEXT_RIGHT)) {
-					control_client.sendControl(PROCESS_KILL, process.pid);
+					control_client.terminateProcess(process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
 			}
@@ -107,10 +118,42 @@ void ProcessesView(nk_context *ctx, char type) {
 	nk_end(ctx);
 }
 
+void DirectoryView(nk_context *ctx) {
+	if (current_dir == "") {
+		current_dir = control_client.getDefaultLocation();
+	}
+
+	double time = GetTime();
+	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
+		files_list = control_client.listDir(current_dir);
+		last_files_get_time = time;
+	}
+
+	if (view_begin("Files")) {
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_end(ctx);
+		for (auto &file: files_list) {
+			if (file.type == 1) {
+				nk_image(ctx, folder_img);
+			}
+			else {
+				nk_image(ctx, file_img);
+			}
+			int selectable;
+			nk_selectable_label(ctx, file.name.c_str(), NK_TEXT_LEFT, &selectable);
+		}
+	} else {
+		current_view = VIEW_NONE;
+	}
+	nk_end(ctx);
+}
+
 void NuklearView(nk_context *ctx) {
 	UpdateNuklear(ctx);
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
-		nk_layout_row_dynamic(ctx, 30, 4);
+		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 4);
 		if (nk_button_label(ctx, "Applications")) {
 			current_view = VIEW_APP;
 		}
@@ -126,13 +169,6 @@ void NuklearView(nk_context *ctx) {
 	}
 	nk_end(ctx);
 
-	double time = GetTime();
-	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
-		if (current_view == VIEW_APP || current_view == VIEW_PROCESS) {
-			processes = control_client.getProcesses();
-			last_processes_get_time = time;
-		}
-	}
 	switch (current_view) {
 		case VIEW_APP:
 			ProcessesView(ctx, 1);
@@ -141,6 +177,7 @@ void NuklearView(nk_context *ctx) {
 			ProcessesView(ctx, 0);
 			break;
 		case VIEW_DIRECTORY:
+			DirectoryView(ctx);
 			break;
 		case VIEW_SETTINGS:
 			break;
@@ -258,6 +295,8 @@ int main(void) {
 	pause_img = LoadNuklearImage("resource/pause.png");
 	play_img = LoadNuklearImage("resource/play.png");
 	stop_img = LoadNuklearImage("resource/stop.png");
+	file_img = LoadNuklearImage("resource/file.png");
+	folder_img = LoadNuklearImage("resource/folder.png");
 
 	//Screen texture Init
 	screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
@@ -290,6 +329,8 @@ int main(void) {
 	UnloadNuklearImage(pause_img);
 	UnloadNuklearImage(play_img);
 	UnloadNuklearImage(stop_img);
+	UnloadNuklearImage(file_img);
+	UnloadNuklearImage(folder_img);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	UnloadTexture(mouse_texture);

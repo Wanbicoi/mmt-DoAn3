@@ -12,17 +12,27 @@ std::vector<char> filesystem_get_drives() {
 			drives.push_back(letter);
 		}
 	}
+	return drives;
 }
 
 std::string filesystem_get_default_location() {
 	return std::string(getenv("USERPROFILE"));
 }
 
-std::vector<std::string> filesystem_list(std::string path) {
-	std::vector<std::string> items;
+std::vector<FileInfo> filesystem_list(std::string path) {
+	fs::path origin(path);
+	std::vector<FileInfo> folders;
+	std::vector<FileInfo> files;
 	for (const auto& entry : fs::directory_iterator(path)) {
-		items.push_back(entry.path().string());
+		if (fs::is_directory(entry.path()))
+			folders.push_back({entry.path().filename().string(), 1});
+		else 
+			files.push_back({entry.path().filename().string(), 0});
 	}
+	//Folders first, then files
+	folders.insert(folders.end(), files.begin(), files.end());
+	
+	return folders;
 }
 
 bool is_folder(const fs::path &path) {
@@ -40,7 +50,7 @@ bool filesystem_check_exist_file(const std::string &from, const std::string &to)
 	fs::path source_file(from);
 	fs::path dest_file(to);
 
-	if (is_file(deth_path)) {
+	if (is_file(dest_file)) {
 		//std::cout << "Error: File with the same name already exists in the destination directory." << std::endl;
 		return 1;
 	}
