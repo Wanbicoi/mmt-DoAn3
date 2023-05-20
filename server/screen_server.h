@@ -38,27 +38,19 @@ private:
 	void handle_write(asio::error_code error) {
 		if (!error) {
 			FrameBuffer buffer = callback_();
-			write(&buffer.mouse_x, sizeof(int));
-			write(&buffer.mouse_y, sizeof(int));
-			write(&buffer.mouse_changed, sizeof(int));
-			if (buffer.mouse_changed) {
-				write(&buffer.mouse_width, sizeof(int));
-				write(&buffer.mouse_height, sizeof(int));
-				write(&buffer.mouse_center_x, sizeof(int));
-				write(&buffer.mouse_center_y, sizeof(int));
-				write(&buffer.mouse_size, sizeof(int));
-				write(buffer.mouse_data, buffer.mouse_size);
-			}
-			write(&buffer.screen_changed, sizeof(int));
 			if (buffer.screen_changed) {
-				write(&buffer.screen_size, sizeof(int));
-				//Call async here reduces some loads
-				asio::async_write(socket_, asio::buffer(buffer.screen_data, buffer.screen_size),
+				write(&buffer, sizeof(FrameBuffer));
+				if (buffer.mouse_changed) {
+					write(buffer.mouse_data, buffer.mouse_size);
+				}
+				if (buffer.screen_changed) {
+					write(buffer.screen_data, buffer.screen_size);
+				}
+				OperationCode opcode = FRAME_DATA;
+				asio::async_write(socket_, asio::buffer(&opcode, sizeof(OperationCode)),
 					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
-			}
-			else {
-				int dummy;
-				asio::async_write(socket_, asio::buffer(&dummy, 0),
+			} else {
+				socket_.async_wait(asio::ip::tcp::socket::wait_write,
 					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
 			}
 		}

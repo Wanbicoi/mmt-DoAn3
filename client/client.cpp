@@ -21,33 +21,27 @@ void ScreenClient::getData(void *data, int size) {
 void ScreenClient::handleRead(std::error_code error) {
 	if (!error) {
 		asio::error_code ignored_error;
-		getData(&mouse_x, sizeof(int));
-		getData(&mouse_y, sizeof(int));
-		int mouse_changed_tmp = 0;
-		getData(&mouse_changed_tmp, sizeof(int));
-		if (mouse_changed_tmp) {
+		FrameBuffer buffer;
+		getData(&buffer, sizeof(FrameBuffer));
+		mouse_x = buffer.mouse_x;
+		mouse_y = buffer.mouse_y;
+		if (buffer.mouse_changed) {
 			int old_mouse_size = mouse_width * mouse_height * 4;
-			getData(&mouse_width, sizeof(int));
-			getData(&mouse_height, sizeof(int));
-			getData(&mouse_center_x, sizeof(int));
-			getData(&mouse_center_y, sizeof(int));
-			int mouse_size = 0;
-			getData(&mouse_size, sizeof(int));
-			if (old_mouse_size != mouse_size)
-				mouse_data = (unsigned char*)realloc(mouse_data, mouse_size);
-			getData(mouse_data, mouse_size);
+			mouse_width = buffer.mouse_width;
+			mouse_height = buffer.mouse_height;
+			mouse_center_x = buffer.mouse_center_x;
+			mouse_center_y = buffer.mouse_center_y;
+			if (old_mouse_size != buffer.mouse_size)
+				mouse_data = (unsigned char*)realloc(mouse_data, buffer.mouse_size);
+			getData(mouse_data, buffer.mouse_size);
 			mouse_changed = 1;
 		}
-		int screen_change_tmp = 0;
-		getData(&screen_change_tmp, sizeof(int));
-		if (screen_change_tmp) {
-			int screen_size;
-			getData(&screen_size, sizeof(int));
-			getData(screen_data, screen_size);
+		if (buffer.screen_changed) {
+			getData(screen_data, buffer.screen_size);
 			screen_changed = 1;
 		}
-		int dummy;
-		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
+		OperationCode opcode = FRAME_DATA;
+		asio::async_read(screen_socket, asio::buffer(&opcode, sizeof(OperationCode)),
 			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
 	}
 

@@ -9,6 +9,7 @@
 enum OperationCode : uint16_t {
 	NONE = 0,
 	SCREEN_CONNECT,
+	FRAME_DATA,
 	CONTROL_DISCONNECT,
 	//Processes and Applications
 	PROCESS_LIST,
