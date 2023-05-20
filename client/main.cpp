@@ -31,6 +31,8 @@ enum View {
 	VIEW_SETTINGS,
 };
 
+struct nk_image pause_img, play_img, stop_img;
+
 View current_view = VIEW_NONE;
 
 std::string current_dir = "";
@@ -85,15 +87,15 @@ void ProcessesView(nk_context *ctx, char type) {
 			if (process.type == type) {
 				nk_label(ctx, TextFormat("%d", process.pid), NK_TEXT_CENTERED);
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
-				if (nk_button_symbol_label(ctx, NK_SYMBOL_RECT_SOLID, "Suspend", NK_TEXT_RIGHT)) {
+				if (nk_button_image_label(ctx, pause_img, "Suspend", NK_TEXT_RIGHT)) {
 					control_client.sendControl(PROCESS_SUSPEND, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
-				if (nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "Resume", NK_TEXT_RIGHT)) {
+				if (nk_button_image_label(ctx, play_img, "Resume", NK_TEXT_RIGHT)) {
 					control_client.sendControl(PROCESS_RESUME, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
-				if (nk_button_symbol_label(ctx, NK_SYMBOL_X, "Terminate", NK_TEXT_RIGHT)) {
+				if (nk_button_image_label(ctx, stop_img, "Terminate", NK_TEXT_RIGHT)) {
 					control_client.sendControl(PROCESS_KILL, process.pid);
 					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
 				}
@@ -149,9 +151,9 @@ void UpdateFrame() {
 	NuklearView(ctx);
 
 	//Get mouse location and whether mouse image has changed
-	if (screen_client.isFrameChanged()) {
+	if (1 || screen_client.isFrameChanged()) {
 		screen_client.getMouseInfo(&mouse_x, &mouse_y);
-		if (1 || screen_client.isMouseImgChanged()) { //Race condition, but seem cheap
+		if (1 || screen_client.isMouseImgChanged()) {
 			unsigned char *mouse_data = screen_client.getMouseData(&mouse_width, &mouse_height);
 			if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
 				//Size changed, create new texture
@@ -247,8 +249,11 @@ int main(void) {
 
 	//Nuklear GUI Init
 	const int fontSize = 16;
-	Font font = LoadFontEx("Roboto-Medium.ttf", fontSize, NULL, 0);
+	Font font = LoadFontEx("resource/Roboto-Medium.ttf", fontSize, NULL, 0);
 	ctx = InitNuklearEx(font, fontSize);
+	pause_img = LoadNuklearImage("resource/pause.png");
+	play_img = LoadNuklearImage("resource/play.png");
+	stop_img = LoadNuklearImage("resource/stop.png");
 
 	//Screen texture Init
 	screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
@@ -277,6 +282,9 @@ int main(void) {
 	//Free resources
 	UnloadNuklear(ctx);
 	UnloadFont(font);
+	UnloadNuklearImage(pause_img);
+	UnloadNuklearImage(play_img);
+	UnloadNuklearImage(stop_img);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	UnloadTexture(mouse_texture);
