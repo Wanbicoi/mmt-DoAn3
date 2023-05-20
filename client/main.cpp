@@ -234,8 +234,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.56.1");
-	control_client.connect("192.168.56.1");
+	screen_client.connect("192.168.1.5");
+	control_client.connect("192.168.1.5");
 	std::thread socket_thread(IoContextRun);
 
 	//Raylib Window Creation
