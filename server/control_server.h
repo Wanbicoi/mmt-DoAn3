@@ -23,11 +23,7 @@ public:
 	template <typename MESSAGE_CALLBACK>
 	void start(const MESSAGE_CALLBACK &callback) {
 		asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
-			std::bind(&ControlConnection::handle_read, shared_from_this(),
-			std::placeholders::_1 /*error*/, std::placeholders::_2 /*bytes_transferred*/));
-
-		// asio::async_write(socket_, asio::buffer(&buf, sizeof(buf)),
-		// 		std::bind(&ControlConnection::handle_write, shared_from_this(), std::placeholders::_1 /*error*/));
+			std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));
 	}
 
 private:
@@ -41,16 +37,18 @@ private:
 	}
 
 	void send(void *data, int size) {
-		asio::async_write(socket_, asio::buffer(data, size), std::bind(&void_write, shared_from_this()));
+		asio::error_code error;
+		asio::write(socket_, asio::buffer(data, size), error);
 	}
 
 	void send(std::string str) {
+		asio::error_code error;
 		int size = str.size();
-		asio::async_write(socket_, asio::buffer(&size, sizeof(int)), std::bind(&void_write, shared_from_this()));
-		asio::async_write(socket_, asio::buffer(str, size), std::bind(&void_write, shared_from_this()));
+		asio::write(socket_, asio::buffer(&size, sizeof(int)), error);
+		asio::write(socket_, asio::buffer(str, size), error);
 	}
 
-	void handle_read(const asio::error_code& error, std::size_t bytes_transferred) {
+	void handle_read(const asio::error_code& error) {
 		if (!error) {
 			std::cout << "Opcode: " << buf.opcode << std::endl;
 			switch (buf.opcode) {
@@ -97,8 +95,7 @@ private:
 					break;
 			}
 			asio::async_read(socket_, asio::buffer(&buf, sizeof(buf)), 
-				std::bind(&ControlConnection::handle_read, shared_from_this(),
-					std::placeholders::_1 /*error*/, std::placeholders::_2 /*bytes_transferred*/));
+				std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));
 		}
 	}
 
@@ -108,7 +105,7 @@ private:
 		}
 	}
 
-	void void_write() {}
+	void void_write(asio::error_code error) {}
 
 	tcp::socket socket_;
 	int mouse_x = 0;
