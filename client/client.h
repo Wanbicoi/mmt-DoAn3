@@ -83,6 +83,8 @@ public:
 
 	std::vector<FileInfo> listDir(std::string path);
 
+	void sendDisconnect();
+
 	~ControlClient();
 };
 

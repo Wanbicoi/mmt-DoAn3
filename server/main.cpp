@@ -90,8 +90,12 @@ int main() {
 				buf.mouse_size = mouse_width * mouse_height * 4;
 				buf.mouse_data = mouse_buffer;
 			}
-			buf.screen_size = screen_buffer_size;
-			buf.screen_data = screen_buffer.get();
+			buf.screen_changed = screen_changed;
+			screen_changed = false;
+			if (buf.screen_changed) {
+				buf.screen_size = screen_buffer_size;
+				buf.screen_data = screen_buffer.get();
+			}
 			return buf;
 		});
 		ControlServer control_server(io_context, [&]() {

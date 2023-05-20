@@ -9,6 +9,7 @@
 enum OperationCode : uint16_t {
 	NONE = 0,
 	SCREEN_CONNECT,
+	CONTROL_DISCONNECT,
 	//Processes and Applications
 	PROCESS_LIST,
 	PROCESS_SUSPEND,
@@ -58,6 +59,7 @@ struct FrameBuffer {
 	int mouse_center_y;
 	int mouse_size;
 	void *mouse_data;
+	int screen_changed;
 	int screen_size;
 	void *screen_data;
 };

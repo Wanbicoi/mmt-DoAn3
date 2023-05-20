@@ -49,10 +49,18 @@ private:
 				write(&buffer.mouse_size, sizeof(int));
 				write(buffer.mouse_data, buffer.mouse_size);
 			}
-			write(&buffer.screen_size, sizeof(int));
-			write(buffer.screen_data, buffer.screen_size);
-			int dummy;
-			asio::async_write(socket_, asio::buffer(&dummy, 0), std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
+			write(&buffer.screen_changed, sizeof(int));
+			if (buffer.screen_changed) {
+				write(&buffer.screen_size, sizeof(int));
+				//Call async here reduces some loads
+				asio::async_write(socket_, asio::buffer(buffer.screen_data, buffer.screen_size),
+					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
+			}
+			else {
+				int dummy;
+				asio::async_write(socket_, asio::buffer(&dummy, 0),
+					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
+			}
 		}
 	}
 

@@ -13,22 +13,23 @@ class ControlConnection : public std::enable_shared_from_this<ControlConnection>
 public:
 	typedef std::shared_ptr<ControlConnection> pointer;
 
-	static pointer create(asio::io_context& io_context) {
-		return pointer(new ControlConnection(io_context));
+	static pointer create(asio::io_context& io_context, const std::function<void()> &callback) {
+		return pointer(new ControlConnection(io_context, callback));
 	}
 
 	tcp::socket& socket() {
 		return socket_;
 	}
 
-	template <typename MESSAGE_CALLBACK>
-	void start(const MESSAGE_CALLBACK &callback) {
+	void start() {
 		asio::async_read(socket_, asio::buffer(&opcode, sizeof(OperationCode)), 
 			std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));
 	}
 
 private:
-	ControlConnection(asio::io_context& io_context) : socket_(io_context) {}
+	ControlConnection(asio::io_context& io_context, const std::function<void()> &callback)
+	: socket_(io_context)
+	, callback_(callback) {}
 
 	template <class T>
 	T read() {
@@ -61,6 +62,9 @@ private:
 		if (!error) {
 			std::cout << "Opcode: " << opcode << std::endl;
 			switch (opcode) {
+				// case CONTROL_DISCONNECT:
+				// 	callback_();
+				// 	break;
 				case PROCESS_LIST: {
 					auto processes = get_current_processes();
 					int size = processes.size();
@@ -144,14 +148,13 @@ private:
 	tcp::socket socket_;
 	int mouse_x = 0;
 	int mouse_y = 0;
+	const std::function<void()> callback_;
 	OperationCode opcode;
 };
 
-
-template <typename MESSAGE_CALLBACK>
 class ControlServer {
 public:
-	ControlServer(asio::io_context& io_context, const MESSAGE_CALLBACK &callback)
+	ControlServer(asio::io_context& io_context, const std::function<void()> &callback)
 		: io_context_(io_context)
 		, acceptor_(io_context, tcp::endpoint(tcp::v4(), SOCKET_CONTROL_PORT))
 		, callback_(callback) {
@@ -160,7 +163,7 @@ public:
 
 private:
 	void start_accept() {
-		ControlConnection::pointer new_connection = ControlConnection::create(io_context_);
+		ControlConnection::pointer new_connection = ControlConnection::create(io_context_, callback_);
 
 		acceptor_.async_accept(new_connection->socket(),
 				std::bind(&ControlServer::handle_accept, this, new_connection, std::placeholders::_1 /*error*/));
@@ -168,12 +171,12 @@ private:
 
 	void handle_accept(ControlConnection::pointer new_connection, const asio::error_code& error) {
 		if (!error) {
-			new_connection->start(callback_);
+			new_connection->start();
 		}
 		start_accept();
 	}
 
 	asio::io_context& io_context_;
 	tcp::acceptor acceptor_;
-	const MESSAGE_CALLBACK callback_;
+	const std::function<void()> callback_;
 };

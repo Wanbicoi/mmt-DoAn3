@@ -38,10 +38,14 @@ void ScreenClient::handleRead(std::error_code error) {
 			getData(mouse_data, mouse_size);
 			mouse_changed = 1;
 		}
-		int screen_size;
-		getData(&screen_size, sizeof(int));
-		getData(screen_data, screen_size);
-		screen_changed = 1;
+		int screen_change_tmp = 0;
+		getData(&screen_change_tmp, sizeof(int));
+		if (screen_change_tmp) {
+			int screen_size;
+			getData(&screen_size, sizeof(int));
+			getData(screen_data, screen_size);
+			screen_changed = 1;
+		}
 		int dummy;
 		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
 			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
@@ -190,12 +194,6 @@ void ControlClient::terminateProcess(int pid) {
 	sendData(&pid, sizeof(int));
 }
 
-
-void ControlSocketClose() {
-	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
-	control_socket.close();
-}
-
 std::vector<ProcessInfo> ControlClient::getProcesses() {
 	sendControl(PROCESS_LIST);
 	int size;
@@ -227,6 +225,10 @@ std::vector<FileInfo> ControlClient::listDir(std::string path) {
 		getData(&entry.type, sizeof(char));
 	}
 	return files_list;
+}
+
+void ControlClient::sendDisconnect() {
+	sendControl(CONTROL_DISCONNECT);
 }
 
 ControlClient::~ControlClient() {
