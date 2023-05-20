@@ -51,18 +51,27 @@ void ScreenClient::connect(const char *address) {
 		screen_socket = tcp::socket(io_context, ep.protocol());
 
 		screen_socket.connect(ep);
-		asio::read(screen_socket, asio::buffer(&screen_info, sizeof(ScreenInfo)));
-
-		screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
-		mouse_data = (unsigned char*)malloc(32 * 32 * 4);
-
-		int dummy;
-		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
-			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
+		connected = 1;
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
+		connected = 0;
 	}
+}
+
+bool ScreenClient::isConnected() {
+	return connected;
+}
+
+void ScreenClient::init() {
+	asio::read(screen_socket, asio::buffer(&screen_info, sizeof(ScreenInfo)));
+
+	screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
+	mouse_data = (unsigned char*)malloc(32 * 32 * 4);
+
+	int dummy;
+	asio::async_read(screen_socket, asio::buffer(&dummy, 0),
+		std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
 }
 
 int ScreenClient::getWidth() {
@@ -135,10 +144,16 @@ void ControlClient::connect(const char *address) {
 		control_socket = tcp::socket(io_context, ep.protocol());
 
 		control_socket.connect(ep);
+		connected = 1;
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
+		connected = 0;
 	}
+}
+
+bool ControlClient::isConnected() {
+	return connected;
 }
 
 void ControlSocketClose() {

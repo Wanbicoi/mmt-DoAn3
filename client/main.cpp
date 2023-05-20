@@ -238,6 +238,10 @@ int main(void) {
 	//Socket connect
 	screen_client.connect("192.168.1.3");
 	control_client.connect("192.168.1.3");
+	if (!screen_client.isConnected() || !control_client.isConnected()) return 1;
+
+	screen_client.init();
+
 	std::thread socket_thread(IoContextRun);
 
 	//Raylib Window Creation
@@ -277,7 +281,7 @@ int main(void) {
 	while (!WindowShouldClose()) {
 		UpdateFrame();
 	}
-	
+
 	IoContextStop();
 	socket_thread.detach();
 	//Free resources

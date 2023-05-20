@@ -6,6 +6,8 @@
 
 class ScreenClient {
 private:
+	bool connected = 0;
+
 	ScreenInfo screen_info = {1080, 720};
 
 	unsigned char *screen_data = nullptr;
@@ -27,6 +29,10 @@ public:
 
 	void connect(const char *address);
 
+	bool isConnected();
+
+	void init();
+
 	int getWidth();
 
 	int getHeight();
@@ -46,6 +52,8 @@ public:
 
 class ControlClient {
 private:
+	bool connected = 0;
+
 	void getData(void *data, int size);
 
 	std::string getString();
@@ -53,6 +61,8 @@ public:
 	ControlClient();
 
 	void connect(const char *address);
+
+	bool isConnected();
 
 	void sendControl(OperationCode opcode, int data = 0, void *raw_data = NULL);
 
