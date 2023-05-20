@@ -13,29 +13,34 @@ ScreenClient::ScreenClient() {
 
 }
 
+void ScreenClient::getData(void *data, int size) {
+	asio::error_code error;
+	asio::read(screen_socket, asio::buffer(data, size), error);
+}
+
 void ScreenClient::handleRead(std::error_code error) {
 	if (!error) {
 		asio::error_code ignored_error;
-		asio::read(screen_socket, asio::buffer(&mouse_x, sizeof(int)), ignored_error);
-		asio::read(screen_socket, asio::buffer(&mouse_y, sizeof(int)), ignored_error);
+		getData(&mouse_x, sizeof(int));
+		getData(&mouse_y, sizeof(int));
 		int mouse_changed_tmp = 0;
-		asio::read(screen_socket, asio::buffer(&mouse_changed_tmp, sizeof(int)), ignored_error);
+		getData(&mouse_changed_tmp, sizeof(int));
 		if (mouse_changed_tmp) {
 			int old_mouse_size = mouse_width * mouse_height * 4;
-			asio::read(screen_socket, asio::buffer(&mouse_width, sizeof(int)), ignored_error);
-			asio::read(screen_socket, asio::buffer(&mouse_height, sizeof(int)), ignored_error);
-			asio::read(screen_socket, asio::buffer(&mouse_center_x, sizeof(int)), ignored_error);
-			asio::read(screen_socket, asio::buffer(&mouse_center_y, sizeof(int)), ignored_error);
+			getData(&mouse_width, sizeof(int));
+			getData(&mouse_height, sizeof(int));
+			getData(&mouse_center_x, sizeof(int));
+			getData(&mouse_center_y, sizeof(int));
 			int mouse_size = 0;
-			asio::read(screen_socket, asio::buffer(&mouse_size, sizeof(int)), ignored_error);
+			getData(&mouse_size, sizeof(int));
 			if (old_mouse_size != mouse_size)
 				mouse_data = (unsigned char*)realloc(mouse_data, mouse_size);
-			asio::read(screen_socket, asio::buffer(mouse_data, mouse_size), ignored_error);
+			getData(mouse_data, mouse_size);
 			mouse_changed = 1;
 		}
 		int screen_size;
-		asio::read(screen_socket, asio::buffer(&screen_size, sizeof(int)), ignored_error);
-		asio::read(screen_socket, asio::buffer(screen_data, screen_size), ignored_error);
+		getData(&screen_size, sizeof(int));
+		getData(screen_data, screen_size);
 		screen_changed = 1;
 		int dummy;
 		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
@@ -64,7 +69,7 @@ bool ScreenClient::isConnected() {
 }
 
 void ScreenClient::init() {
-	asio::read(screen_socket, asio::buffer(&screen_info, sizeof(ScreenInfo)));
+	getData(&screen_info, sizeof(ScreenInfo));
 
 	screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
 	mouse_data = (unsigned char*)malloc(32 * 32 * 4);

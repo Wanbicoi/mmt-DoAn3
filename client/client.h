@@ -22,6 +22,7 @@ private:
 	std::atomic<int> mouse_center_x = 0;
 	std::atomic<int> mouse_center_y = 0;
 
+	void getData(void *data, int size);
 
 	void handleRead(std::error_code error);
 public:
