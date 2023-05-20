@@ -151,9 +151,9 @@ void UpdateFrame() {
 	NuklearView(ctx);
 
 	//Get mouse location and whether mouse image has changed
-	if (1 || screen_client.isFrameChanged()) {
+	if (screen_client.isFrameChanged()) {
 		screen_client.getMouseInfo(&mouse_x, &mouse_y);
-		if (1 || screen_client.isMouseImgChanged()) {
+		if (screen_client.isMouseImgChanged()) {
 			unsigned char *mouse_data = screen_client.getMouseData(&mouse_width, &mouse_height);
 			if (mouse_width != mouse_texture.width || mouse_height != mouse_texture.height) {
 				//Size changed, create new texture
@@ -236,8 +236,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.1.5");
-	control_client.connect("192.168.1.5");
+	screen_client.connect("192.168.1.3");
+	control_client.connect("192.168.1.3");
 	std::thread socket_thread(IoContextRun);
 
 	//Raylib Window Creation
@@ -277,7 +277,8 @@ int main(void) {
 	while (!WindowShouldClose()) {
 		UpdateFrame();
 	}
-
+	
+	IoContextStop();
 	socket_thread.detach();
 	//Free resources
 	UnloadNuklear(ctx);

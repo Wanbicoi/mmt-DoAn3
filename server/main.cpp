@@ -24,6 +24,8 @@ int main() {
 	std::atomic<int> mouse_y = 0;
 	std::atomic<int> mouse_width = 0;
 	std::atomic<int> mouse_height = 0;
+	std::atomic<int> mouse_center_x = 0;
+	std::atomic<int> mouse_center_y = 0;
 
 	auto framgrabber = SL::Screen_Capture::CreateCaptureConfiguration([&]() { return mons; })
 		->onNewFrame([&](const SL::Screen_Capture::Image &img, const SL::Screen_Capture::Monitor &monitor) {
@@ -38,6 +40,8 @@ int main() {
 				mouse_changed = true;
 				mouse_width = Width(*img);
 				mouse_height = Height(*img);
+				mouse_center_x = mousepoint.HotSpot.x;
+				mouse_center_y = mousepoint.HotSpot.y;
 				int mouse_buffer_size = mouse_width * mouse_height * 4;
 				mouse_buffer = (unsigned char*)realloc(mouse_buffer, mouse_buffer_size);
 				memcpy(mouse_buffer, StartSrc(*img), mouse_buffer_size);
@@ -81,6 +85,8 @@ int main() {
 			if (buf.mouse_changed) {
 				buf.mouse_width = mouse_width;
 				buf.mouse_height = mouse_height;
+				buf.mouse_center_x = mouse_center_x;
+				buf.mouse_center_y = mouse_center_y;
 				buf.mouse_size = mouse_width * mouse_height * 4;
 				buf.mouse_data = mouse_buffer;
 			}

@@ -54,6 +54,8 @@ struct FrameBuffer {
 	int mouse_changed;
 	int mouse_width;
 	int mouse_height;
+	int mouse_center_x;
+	int mouse_center_y;
 	int mouse_size;
 	void *mouse_data;
 	int screen_size;

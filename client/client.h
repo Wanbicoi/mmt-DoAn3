@@ -17,6 +17,8 @@ private:
 	std::atomic<int> mouse_y = 0;
 	std::atomic<int> mouse_width = 0;
 	std::atomic<int> mouse_height = 0;
+	std::atomic<int> mouse_center_x = 0;
+	std::atomic<int> mouse_center_y = 0;
 
 
 	void handleRead(std::error_code error);
@@ -60,3 +62,5 @@ public:
 };
 
 void IoContextRun();
+
+void IoContextStop();

@@ -16,23 +16,27 @@ ScreenClient::ScreenClient() {
 void ScreenClient::handleRead(std::error_code error) {
 	if (!error) {
 		asio::error_code ignored_error;
-		screen_changed = 1;
 		asio::read(screen_socket, asio::buffer(&mouse_x, sizeof(int)), ignored_error);
 		asio::read(screen_socket, asio::buffer(&mouse_y, sizeof(int)), ignored_error);
-		asio::read(screen_socket, asio::buffer(&mouse_changed, sizeof(int)), ignored_error);
-		if (mouse_changed) {
+		int mouse_changed_tmp = 0;
+		asio::read(screen_socket, asio::buffer(&mouse_changed_tmp, sizeof(int)), ignored_error);
+		if (mouse_changed_tmp) {
 			int old_mouse_size = mouse_width * mouse_height * 4;
 			asio::read(screen_socket, asio::buffer(&mouse_width, sizeof(int)), ignored_error);
 			asio::read(screen_socket, asio::buffer(&mouse_height, sizeof(int)), ignored_error);
+			asio::read(screen_socket, asio::buffer(&mouse_center_x, sizeof(int)), ignored_error);
+			asio::read(screen_socket, asio::buffer(&mouse_center_y, sizeof(int)), ignored_error);
 			int mouse_size = 0;
 			asio::read(screen_socket, asio::buffer(&mouse_size, sizeof(int)), ignored_error);
 			if (old_mouse_size != mouse_size)
 				mouse_data = (unsigned char*)realloc(mouse_data, mouse_size);
 			asio::read(screen_socket, asio::buffer(mouse_data, mouse_size), ignored_error);
+			mouse_changed = 1;
 		}
 		int screen_size;
 		asio::read(screen_socket, asio::buffer(&screen_size, sizeof(int)), ignored_error);
 		asio::read(screen_socket, asio::buffer(screen_data, screen_size), ignored_error);
+		screen_changed = 1;
 		int dummy;
 		asio::async_read(screen_socket, asio::buffer(&dummy, 0),
 			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
@@ -76,7 +80,9 @@ bool ScreenClient::isFrameChanged() {
 }
 
 bool ScreenClient::isMouseImgChanged() {
-	return mouse_changed;
+	bool changed = mouse_changed;
+	mouse_changed = 0;
+	return changed;
 }
 
 unsigned char* ScreenClient::getScreenData() {
@@ -84,8 +90,8 @@ unsigned char* ScreenClient::getScreenData() {
 }
 
 void ScreenClient::getMouseInfo(int *x, int *y) {
-	*x = mouse_x;
-	*y = mouse_y;
+	*x = mouse_x - mouse_center_x;
+	*y = mouse_y - mouse_center_y;
 }
 
 unsigned char* ScreenClient::getMouseData(int *width, int *height) {
@@ -180,4 +186,8 @@ ControlClient::~ControlClient() {
 
 void IoContextRun() {
 	io_context.run();
+}
+
+void IoContextStop() {
+	io_context.stop();
 }
