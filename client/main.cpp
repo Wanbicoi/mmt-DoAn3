@@ -100,15 +100,15 @@ void ProcessesView(nk_context *ctx, char type) {
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
 				if (nk_button_image_label(ctx, pause_img, "Suspend", NK_TEXT_RIGHT)) {
 					control_client.suspendProcess(process.pid);
-					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_image_label(ctx, play_img, "Resume", NK_TEXT_RIGHT)) {
 					control_client.resumeProcess(process.pid);
-					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
 				}
 				if (nk_button_image_label(ctx, stop_img, "Terminate", NK_TEXT_RIGHT)) {
 					control_client.terminateProcess(process.pid);
-					last_processes_get_time = -PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
 				}
 			}
 		}
@@ -119,7 +119,7 @@ void ProcessesView(nk_context *ctx, char type) {
 }
 
 void DirectoryView(nk_context *ctx) {
-	if (current_dir == "") {
+	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
 		current_dir = control_client.getDefaultLocation();
 	}
 
