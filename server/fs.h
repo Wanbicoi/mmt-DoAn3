@@ -27,11 +27,12 @@ std::vector<FileInfo> filesystem_list(std::string path) {
 			drives.push_back({std::string(1, letter), ENTRY_DRIVE});
 		return drives;
 	} //else
-	
+
 	fs::path origin(path);
 	std::vector<FileInfo> folders(1, {"..", ENTRY_PARENT});
 	std::vector<FileInfo> files;
-	for (const auto& entry: fs::directory_iterator(path)) {
+	std::error_code error;
+	for (const auto& entry: fs::directory_iterator(path, error)) {
 		if (fs::is_directory(entry.path()))
 			folders.push_back({entry.path().filename().string(), ENTRY_FOLDER});
 		else 
