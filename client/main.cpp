@@ -69,7 +69,7 @@ int view_begin(const char *name, bool forced = 0) {
 
 void ProcessesView(nk_context *ctx, char type) {
 	static std::vector<ProcessInfo> processes;
-	const static int PROCESS_FETCH_INTERVAL = 5; //seconds
+	const static int PROCESS_FETCH_INTERVAL = 2; //seconds
 	static double last_processes_get_time = -PROCESS_FETCH_INTERVAL;
 
 	double time = GetTime();
@@ -126,16 +126,11 @@ void ProcessesView(nk_context *ctx, char type) {
 }
 
 void FileOperationPopup(nk_context *ctx) {
-	static fs::path current_dir = "";
+	static fs::path current_dir = to_path;
 	static std::string selected_entry = "";
 	static std::vector<FileInfo> files_list;
 	const static int FILELIST_FETCH_INTERVAL = 5; //seconds
 	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
-
-
-	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
-		current_dir = fs::path(control_client.getDefaultLocation());
-	}
 
 	double time = GetTime();
 	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
@@ -230,12 +225,16 @@ void FileOperationPopup(nk_context *ctx) {
 		}
 		else {
 			if (nk_button_label(ctx, "Confirm")) {
-				if (from_is_folder)
-					to_path = current_dir / from_path.filename();
+				to_path = current_dir / from_path.filename();
+				std::cout << from_path << " | " << to_path << std::endl;
 				if (control_client.checkExist(from_path.string(), to_path.string())) {
 					file_popup = 1;
 				}
 				else {
+					if (copy_0_move_1)
+						control_client.requestMove(from_path.string(), to_path.string(), 0);
+					else
+						control_client.requestCopy(from_path.string(), to_path.string(), 0);
 					from_path = "";
 				}
 			}
@@ -360,16 +359,20 @@ void DirectoryView(nk_context *ctx) {
 				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
 				if (nk_contextual_item_image_label(ctx, copy_img, "Copy", NK_TEXT_CENTERED)) {
 					from_path = current_dir / entry.name;
+					to_path = current_dir;
 					copy_0_move_1 = 0;
 					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, move_img, "Move", NK_TEXT_CENTERED)) {
 					from_path = current_dir / entry.name;
+					to_path = current_dir;
 					copy_0_move_1 = 1;
 					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, delete_img, "Delete", NK_TEXT_CENTERED)) {
-					std::cout << "Delete " << entry.name << std::endl;
+					fs::path del_path = current_dir / entry.name;
+					std::cout << "Delete " << del_path << std::endl;
+					control_client.requestDelete(del_path.string());
 				}
 				nk_contextual_end(ctx);
 			}

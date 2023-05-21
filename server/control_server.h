@@ -10,6 +10,9 @@
 #include "fs.h"
 using asio::ip::tcp;
 
+FileSystemWorker fs_worker;
+std::thread fs_worker_thread(fs_worker.execute, std::ref(fs_worker));
+
 class ControlConnection : public std::enable_shared_from_this<ControlConnection> {
 public:
 	typedef std::shared_ptr<ControlConnection> pointer;
@@ -132,8 +135,13 @@ private:
 				case FS_COPY: {
 					std::string from = readString();
 					std::string to = readString();
-					std::cout << "Copy " << from << " to " << to << std::endl;
 					bool overwrite = read<bool>();
+					std::cout << "Copy " << from << " to " << to << std::endl;
+					if (overwrite) std::cout << "overwrite!\n";
+					fs_worker.queueCopy(from, to, overwrite, [](int error) {
+						if (error)
+							std::cout << "Error during copy: " << error << std::endl;
+					});
 					break;
 				}
 				case FS_MOVE: {
@@ -141,6 +149,10 @@ private:
 					std::string to = readString();
 					bool overwrite = read<bool>();
 					std::cout << "Move " << from << " to " << to << std::endl;
+					fs_worker.queueMove(from, to, overwrite, [](int error) {
+						if (error)
+							std::cout << "Error during move: " << error << std::endl;
+					});
 					break;
 				}
 				case FS_WRITE: {
@@ -148,7 +160,10 @@ private:
 				}
 				case FS_DELETE: {
 					std::string path = readString();
-					std::cout << "Delete " << path << std::endl;
+					fs_worker.queueDelete(path, [](int error) {
+						if (error)
+							std::cout << "Error during delete: " << error << std::endl;
+					});
 					break;
 				}
 			}

@@ -1,6 +1,8 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include "queue.h"
+#include <functional>
 #include <system_error>
 namespace fs = std::filesystem;
 
@@ -87,14 +89,11 @@ bool filesystem_check_exist(const std::string &from, const std::string &to) {
 	fs::path from_path(from);
 	fs::path to_path(to);
 
-	if (is_file(from_path) && is_file(to_path)) {
+	if (is_file(from_path)) {
 		return filesystem_check_exist_file(from, to);
 	}
-	else if (is_folder(from_path) && is_folder(to_path)) {
+	else if (is_folder(from_path)) {
 		return filesystem_check_exist_dir(from, to);
-	}
-	else {
-		std::cout << "from and to must be same type of path" << std::endl;
 	}
 
 	return 1;
@@ -102,12 +101,15 @@ bool filesystem_check_exist(const std::string &from, const std::string &to) {
 
 //parent should not end with slash
 int filesystem_copy(const std::string &from, const std::string &to, bool overwrite) {
+	std::cout << "Copy " << from << " | " << to << std::endl;
+	if (overwrite) std::cout << "overwrite!\n";
 	auto copy_options = fs::copy_options::recursive;
 	if (overwrite) copy_options |= fs::copy_options::overwrite_existing;
 	else copy_options |= fs::copy_options::skip_existing;
 	std::error_code error;
 
 	fs::copy(from, to, copy_options, error);
+	std::cout << error.message() << std::endl;
 	return error.value();
 }
 
@@ -146,8 +148,73 @@ int filesystem_write(const std::string &path, bool overwrite, void *data, size_t
 
 }
 
-int filesystem_delete(const std::string &path, int *deleted) {
+int filesystem_delete(const std::string &path) {
 	std::error_code error;
-	*deleted = fs::remove_all(path, error);
+	bool num_deleted = fs::remove_all(path, error);
 	return error.value();
 }
+
+enum FSJobType : char {
+	FS_JOB_NONE = 0,
+	FS_JOB_COPY,
+	FS_JOB_MOVE,
+	FS_JOB_WRITE,
+	FS_JOB_DELETE
+};
+
+struct FSJob {
+	FSJobType type;
+	std::string from;
+	std::string to;
+	bool overwrite;
+	std::function<void(int)> callback;
+};
+
+class FileSystemWorker {
+private:
+	SharedQueue<FSJob> jobs; //practically this application should wait for job to finish first before sending another, if there're any
+	bool is_stopped = 0;
+public:
+	void execute() {
+		while (1) {
+			if (jobs.empty()) std::this_thread::sleep_for(std::chrono::seconds(1));
+			else {
+				int error = 0;
+				FSJob job = jobs.front();
+				jobs.pop_front();
+				switch (job.type) {
+					case FS_JOB_NONE: break;
+					case FS_JOB_COPY:
+						error = filesystem_copy(job.from, job.to, job.overwrite);
+						job.callback(error);
+						break;
+					case FS_JOB_MOVE:
+						error = filesystem_rename(job.from, job.to, job.overwrite);
+						job.callback(error);
+						break;
+					case FS_JOB_WRITE:
+						break;
+					case FS_JOB_DELETE:
+						error = filesystem_delete(job.from);
+						job.callback(error);
+						break;
+				}
+			}
+		}
+	}
+
+	void queueCopy(std::string from, std::string to, bool overwrite, std::function<void(int)> callback) {
+		jobs.push_back({FS_JOB_COPY, from, to, overwrite, callback});
+	}
+
+	void queueMove(std::string from, std::string to, bool overwrite, std::function<void(int)> callback) {
+		jobs.push_back({FS_JOB_MOVE, from, to, overwrite, callback});
+	}
+
+	void queueWrite(std::function<void(int)> callback) {
+	}
+
+	void queueDelete(std::string path, std::function<void(int)> callback) {
+		jobs.push_back({FS_JOB_DELETE, path, "", 0, callback});
+	}
+};
