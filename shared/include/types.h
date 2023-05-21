@@ -51,6 +51,7 @@ struct MousePosition {
 };
 
 struct FrameBuffer {
+	char key[256];
 	int mouse_x;
 	int mouse_y;
 	int mouse_changed;

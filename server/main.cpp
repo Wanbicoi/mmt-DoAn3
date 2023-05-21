@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <asio.hpp>
+#include <Windows.h>
 #include <atomic>
 #include "ScreenCapture.h"
 #include "screen_server.h"
@@ -79,6 +80,13 @@ int main() {
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
 			FrameBuffer buf;
+			for (int i = 0; i < 256; i++) {
+				short res = GetAsyncKeyState(i);
+				if (res & 0x8000)
+					buf.key[i] = 1;
+				else
+					buf.key[i] = 0;
+			}
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouse_changed;

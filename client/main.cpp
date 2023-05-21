@@ -285,8 +285,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.1.3");
-	control_client.connect("192.168.1.3");
+	screen_client.connect("192.168.2.7");
+	control_client.connect("192.168.2.7");
 
 	screen_client.init();
 
