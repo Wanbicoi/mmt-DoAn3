@@ -7,8 +7,8 @@ namespace fs = std::filesystem;
 std::vector<char> filesystem_get_drives() {
 	std::vector<char> drives;
 	for (char letter = 'A'; letter <= 'Z'; ++letter) {
-		fs::path drivePath = fs::path(std::string(1, letter) + ":\\");
-		if (fs::exists(drivePath)) {
+		fs::path drive_path = fs::path(std::string(1, letter) + ":\\");
+		if (fs::exists(drive_path)) {
 			drives.push_back(letter);
 		}
 	}
@@ -20,14 +20,22 @@ std::string filesystem_get_default_location() {
 }
 
 std::vector<FileInfo> filesystem_list(std::string path) {
+	if (path == "") { //Drives
+		auto drive_letters = filesystem_get_drives();
+		std::vector<FileInfo> drives;
+		for (const auto &letter: drive_letters)
+			drives.push_back({std::string(1, letter), ENTRY_DRIVE});
+		return drives;
+	} //else
+	
 	fs::path origin(path);
-	std::vector<FileInfo> folders;
+	std::vector<FileInfo> folders(1, {"..", ENTRY_PARENT});
 	std::vector<FileInfo> files;
-	for (const auto& entry : fs::directory_iterator(path)) {
+	for (const auto& entry: fs::directory_iterator(path)) {
 		if (fs::is_directory(entry.path()))
-			folders.push_back({entry.path().filename().string(), 1});
+			folders.push_back({entry.path().filename().string(), ENTRY_FOLDER});
 		else 
-			files.push_back({entry.path().filename().string(), 0});
+			files.push_back({entry.path().filename().string(), ENTRY_FILE});
 	}
 	//Folders first, then files
 	folders.insert(folders.end(), files.begin(), files.end());

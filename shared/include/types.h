@@ -66,6 +66,13 @@ struct FrameBuffer {
 	void *screen_data;
 };
 
+enum FileEntry : char {
+	ENTRY_FILE,
+	ENTRY_FOLDER,
+	ENTRY_PARENT,
+	ENTRY_DRIVE
+};
+
 struct ProcessInfo {
 	int pid;
 	std::string name;
@@ -74,5 +81,5 @@ struct ProcessInfo {
 
 struct FileInfo {
 	std::string name;
-	char type;
+	FileEntry type;
 };
