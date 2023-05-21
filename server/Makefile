@@ -11,5 +11,5 @@ INCLUDE_PATH = -I../shared/include/
 LIBS_PATH = -L../shared/lib/
 
 main:
-	$(CXX) main.cpp $(INCLUDE_PATH) $(LIBS_PATH) $(STATIC) $(SCREEN_CAPTURE_LIBS) $(ASIO_LIBS) -o main.exe
-	main.exe
+	$(CXX) main.cpp $(INCLUDE_PATH) $(LIBS_PATH) $(STATIC) $(SCREEN_CAPTURE_LIBS) $(ASIO_LIBS) -o server.exe
+	server.exe
