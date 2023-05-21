@@ -155,16 +155,28 @@ void NuklearView(nk_context *ctx) {
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
 		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 4);
 		if (nk_button_label(ctx, "Applications")) {
-			current_view = VIEW_APP;
+			if (current_view == VIEW_APP)
+				current_view = VIEW_NONE;
+			else 
+				current_view = VIEW_APP;
 		}
 		if (nk_button_label(ctx, "Procceses")) {
-			current_view = VIEW_PROCESS;
+			if (current_view == VIEW_PROCESS)
+				current_view = VIEW_NONE;
+			else 
+				current_view = VIEW_PROCESS;
 		}
 		if (nk_button_label(ctx, "Files")) {
-			current_view = VIEW_DIRECTORY;
+			if (current_view == VIEW_DIRECTORY)
+				current_view = VIEW_NONE;
+			else 
+				current_view = VIEW_DIRECTORY;
 		}
 		if (nk_button_label(ctx, "Settings")) {
-			current_view = VIEW_SETTINGS;
+			if (current_view == VIEW_SETTINGS)
+				current_view = VIEW_NONE;
+			else 
+				current_view = VIEW_SETTINGS;
 		}
 	}
 	nk_end(ctx);
