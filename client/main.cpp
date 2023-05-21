@@ -35,16 +35,21 @@ enum View {
 	VIEW_SETTINGS,
 };
 
-struct nk_image pause_img, play_img, stop_img, file_img, folder_img;
+struct nk_image
+	pause_img, play_img, stop_img,
+	file_img, folder_img, parent_img, drive_img,
+	open_img, copy_img, move_img, delete_img;
 
 View current_view = VIEW_NONE;
 
 fs::path current_dir = "";
 std::string selected_entry = "";
 std::vector<FileInfo> files_list;
-std::vector<ProcessInfo> processes;
 #define FILELIST_FETCH_INTERVAL 5
 double last_files_get_time = -FILELIST_FETCH_INTERVAL; //seconds
+
+#define MOUSE_DOUBLE_CLICK_SECONDS 0.2
+double last_click = 0;
 
 Texture2D screen_texture = {0};
 Image screen_image = {0};
@@ -56,6 +61,7 @@ bool mouse_was_down[3] = {0};
 Camera2D camera = {0};
 Shader shader = {0};
 
+std::vector<ProcessInfo> processes;
 #define PROCESS_FETCH_INTERVAL 5
 double last_processes_get_time = -PROCESS_FETCH_INTERVAL; //seconds
 
@@ -133,42 +139,89 @@ void DirectoryView(nk_context *ctx) {
 	}
 
 	if (view_begin("Files")) {
+		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+		if (current_dir == "")
+			nk_select_label(ctx, "Drives", NK_TEXT_LEFT, 1);
+		else
+			nk_select_label(ctx, current_dir.string().c_str(), NK_TEXT_LEFT, 1);
+
 		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_dynamic(ctx);
 		nk_layout_row_template_end(ctx);
+
+		struct nk_style_selectable selectable = ctx->style.selectable;
+		ctx->style.selectable.hover = nk_style_item_color(nk_rgb(42,42,42));
+
 		for (auto &entry: files_list) {
-			if (entry.type == ENTRY_FILE) {
-				nk_image(ctx, file_img);
+			switch (entry.type) {
+				case ENTRY_FILE: nk_image(ctx, file_img); break;
+				case ENTRY_FOLDER: nk_image(ctx, folder_img); break;
+				case ENTRY_PARENT: nk_image(ctx, parent_img); break;
+				case ENTRY_DRIVE: nk_image(ctx, drive_img); break;
 			}
-			else {
-				nk_image(ctx, folder_img);
-			}
+			
 			int is_selected = selected_entry == entry.name;
+			struct nk_rect bounds = nk_widget_bounds(ctx);
 			if (nk_select_label(ctx, entry.name.c_str(), NK_TEXT_LEFT, is_selected)) {
 				if (selected_entry != entry.name)
 					selected_entry = entry.name;
-				if (GetGestureDetected() == GESTURE_DOUBLETAP) {
-					if (entry.type == ENTRY_FOLDER || entry.type == ENTRY_DRIVE) {
-						if (entry.type == ENTRY_DRIVE) current_dir = entry.name + ":\\"; //Drive
-						else current_dir /= entry.name;
-						last_files_get_time -= FILELIST_FETCH_INTERVAL;
-						selected_entry = "";
+				if (time - last_click <= MOUSE_DOUBLE_CLICK_SECONDS && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+					last_click = 0;
+					switch (entry.type) {
+						case ENTRY_FILE:
+							last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
+							break;
+						case ENTRY_FOLDER:
+							current_dir /= entry.name;
+							break;
+						case ENTRY_PARENT:
+							if (current_dir == current_dir.root_path()) current_dir = "";
+							else current_dir = current_dir.parent_path().string();
+							break;
+						case ENTRY_DRIVE:
+							current_dir = entry.name + ":\\";
+							break;
 					}
-					else if (entry.type == ENTRY_PARENT) { // .. (parent) folder
-						if (current_dir == current_dir.root_path())
-							current_dir = "";
-						else
-							current_dir = current_dir.parent_path().string();
-						last_files_get_time -= FILELIST_FETCH_INTERVAL;
-						selected_entry = "";
-					}
-					else {
-						selected_entry = "";
-					}
+					last_files_get_time -= FILELIST_FETCH_INTERVAL;
+					selected_entry = "";
 				}
 			}
+			if (nk_contextual_begin(ctx, 0, nk_vec2(150, 200), bounds)) {
+				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+				if (nk_contextual_item_image_label(ctx, open_img, "Open", NK_TEXT_CENTERED)) {
+					switch (entry.type) {
+						case ENTRY_FILE:
+							last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
+							break;
+						case ENTRY_FOLDER:
+							current_dir /= entry.name;
+							break;
+						case ENTRY_PARENT:
+							if (current_dir == current_dir.root_path()) current_dir = "";
+							else current_dir = current_dir.parent_path().string();
+							break;
+						case ENTRY_DRIVE:
+							current_dir = entry.name + ":\\";
+							break;
+					}
+					last_files_get_time -= FILELIST_FETCH_INTERVAL;
+					selected_entry = "";
+				}
+				if (nk_contextual_item_image_label(ctx, copy_img, "Copy", NK_TEXT_CENTERED)) {
+					std::cout << "Copy " << entry.name << std::endl;
+				}
+				if (nk_contextual_item_image_label(ctx, move_img, "Move", NK_TEXT_CENTERED)) {
+					std::cout << "Move " << entry.name << std::endl;
+				}
+				if (nk_contextual_item_image_label(ctx, delete_img, "Delete", NK_TEXT_CENTERED)) {
+					std::cout << "Delete " << entry.name << std::endl;
+				}
+				nk_contextual_end(ctx);
+			}
+
 		}
+		ctx->style.selectable = selectable;
 	} else {
 		current_view = VIEW_NONE;
 	}
@@ -223,6 +276,8 @@ void NuklearView(nk_context *ctx) {
 
 void UpdateFrame() {
 	NuklearView(ctx);
+	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+		last_click = GetTime();
 
 	//Get mouse location and whether mouse image has changed
 	if (screen_client.isFrameChanged()) {
@@ -333,6 +388,12 @@ int main(void) {
 	stop_img = LoadNuklearImage("resource/stop.png");
 	file_img = LoadNuklearImage("resource/file.png");
 	folder_img = LoadNuklearImage("resource/folder.png");
+	parent_img = LoadNuklearImage("resource/parent.png");
+	drive_img = LoadNuklearImage("resource/drive.png");
+	open_img = LoadNuklearImage("resource/open.png");
+	copy_img = LoadNuklearImage("resource/copy.png");
+	move_img = LoadNuklearImage("resource/move.png");
+	delete_img = LoadNuklearImage("resource/delete.png");
 
 	//Screen texture Init
 	screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
@@ -368,6 +429,12 @@ int main(void) {
 	UnloadNuklearImage(stop_img);
 	UnloadNuklearImage(file_img);
 	UnloadNuklearImage(folder_img);
+	UnloadNuklearImage(parent_img);
+	UnloadNuklearImage(drive_img);
+	UnloadNuklearImage(open_img);
+	UnloadNuklearImage(copy_img);
+	UnloadNuklearImage(move_img);
+	UnloadNuklearImage(delete_img);
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	UnloadTexture(mouse_texture);
