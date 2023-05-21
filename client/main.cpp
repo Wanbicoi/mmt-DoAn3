@@ -9,6 +9,8 @@
 #include "client.h"
 #include <iostream>
 #include <thread>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 540
@@ -37,7 +39,8 @@ struct nk_image pause_img, play_img, stop_img, file_img, folder_img;
 
 View current_view = VIEW_NONE;
 
-std::string current_dir = "";
+fs::path current_dir = "";
+std::string selected_entry = "";
 std::vector<FileInfo> files_list;
 std::vector<ProcessInfo> processes;
 #define FILELIST_FETCH_INTERVAL 5
@@ -120,12 +123,12 @@ void ProcessesView(nk_context *ctx, char type) {
 
 void DirectoryView(nk_context *ctx) {
 	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
-		current_dir = control_client.getDefaultLocation();
+		current_dir = fs::path(control_client.getDefaultLocation());
 	}
 
 	double time = GetTime();
 	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
-		files_list = control_client.listDir(current_dir);
+		files_list = control_client.listDir(current_dir.string());
 		last_files_get_time = time;
 	}
 
@@ -134,15 +137,37 @@ void DirectoryView(nk_context *ctx) {
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_dynamic(ctx);
 		nk_layout_row_template_end(ctx);
-		for (auto &file: files_list) {
-			if (file.type == 1) {
-				nk_image(ctx, folder_img);
-			}
-			else {
+		for (auto &entry: files_list) {
+			if (entry.type == ENTRY_FILE) {
 				nk_image(ctx, file_img);
 			}
-			int selectable;
-			nk_selectable_label(ctx, file.name.c_str(), NK_TEXT_LEFT, &selectable);
+			else {
+				nk_image(ctx, folder_img);
+			}
+			int is_selected = selected_entry == entry.name;
+			if (nk_select_label(ctx, entry.name.c_str(), NK_TEXT_LEFT, is_selected)) {
+				if (selected_entry != entry.name)
+					selected_entry = entry.name;
+				if (GetGestureDetected() == GESTURE_DOUBLETAP) {
+					if (entry.type == ENTRY_FOLDER || entry.type == ENTRY_DRIVE) {
+						if (entry.type == ENTRY_DRIVE) current_dir = entry.name + ":\\"; //Drive
+						else current_dir /= entry.name;
+						last_files_get_time -= FILELIST_FETCH_INTERVAL;
+						selected_entry = "";
+					}
+					else if (entry.type == ENTRY_PARENT) { // .. (parent) folder
+						if (current_dir == current_dir.root_path())
+							current_dir = "";
+						else
+							current_dir = current_dir.parent_path().string();
+						last_files_get_time -= FILELIST_FETCH_INTERVAL;
+						selected_entry = "";
+					}
+					else {
+						selected_entry = "";
+					}
+				}
+			}
 		}
 	} else {
 		current_view = VIEW_NONE;
