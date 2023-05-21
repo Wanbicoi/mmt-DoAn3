@@ -82,7 +82,6 @@ int main() {
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouse_changed;
-			mouse_changed = false;
 			if (buf.mouse_changed) {
 				buf.mouse_width = mouse_width;
 				buf.mouse_height = mouse_height;
@@ -94,6 +93,7 @@ int main() {
 			buf.screen_changed = screen_changed;
 			screen_changed = false;
 			if (buf.screen_changed) {
+				mouse_changed = false;
 				buf.screen_size = screen_buffer_size;
 				buf.screen_data = screen_buffer.get();
 			}

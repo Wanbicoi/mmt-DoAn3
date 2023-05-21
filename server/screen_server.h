@@ -49,7 +49,8 @@ private:
 				OperationCode opcode = FRAME_DATA;
 				asio::async_write(socket_, asio::buffer(&opcode, sizeof(OperationCode)),
 					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
-			} else {
+			}
+			else {
 				socket_.async_wait(asio::ip::tcp::socket::wait_write,
 					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));
 			}
