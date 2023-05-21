@@ -83,6 +83,14 @@ public:
 
 	std::vector<FileInfo> listDir(std::string path);
 
+	bool checkExist(std::string from, std::string to);
+
+	void requestCopy(std::string from, std::string to, bool overwrite);
+
+	void requestMove(std::string from, std::string to, bool overwrite);
+
+	void requestDelete(std::string path);
+
 	void sendDisconnect();
 
 	~ControlClient();

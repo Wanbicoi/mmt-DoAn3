@@ -221,6 +221,34 @@ std::vector<FileInfo> ControlClient::listDir(std::string path) {
 	return files_list;
 }
 
+bool ControlClient::checkExist(std::string from, std::string to) {
+	sendControl(FS_CHECK_EXIST);
+	sendString(from);
+	sendString(to);
+	bool res = 1;
+	getData(&res, sizeof(bool));
+	return res;
+}
+
+void ControlClient::requestCopy(std::string from, std::string to, bool overwrite) {
+	sendControl(FS_COPY);
+	sendString(from);
+	sendString(to);
+	sendData(&overwrite, sizeof(bool));
+}
+
+void ControlClient::requestMove(std::string from, std::string to, bool overwrite) {
+	sendControl(FS_MOVE);
+	sendString(from);
+	sendString(to);
+	sendData(&overwrite, sizeof(bool));
+}
+
+void ControlClient::requestDelete(std::string path) {
+	sendControl(FS_DELETE);
+	sendString(path);
+}
+
 void ControlClient::sendDisconnect() {
 	sendControl(CONTROL_DISCONNECT);
 }

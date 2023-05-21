@@ -12,9 +12,6 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#define SCREEN_WIDTH 960
-#define SCREEN_HEIGHT 540
-
 ScreenClient screen_client;
 ControlClient control_client;
 
@@ -23,7 +20,6 @@ ControlClient control_client;
 
 #define MOUSE_NONE -2
 #define MOUSE_HOVER -1
-
 
 nk_context *ctx = NULL;
 int mouse_interacting_nuklear = MOUSE_NONE;
@@ -42,14 +38,14 @@ struct nk_image
 
 View current_view = VIEW_NONE;
 
-fs::path current_dir = "";
-std::string selected_entry = "";
-std::vector<FileInfo> files_list;
-#define FILELIST_FETCH_INTERVAL 5
-double last_files_get_time = -FILELIST_FETCH_INTERVAL; //seconds
-
 #define MOUSE_DOUBLE_CLICK_SECONDS 0.2
 double last_click = 0;
+
+bool file_popup = 0;
+fs::path from_path = "";
+fs::path to_path = "";
+bool from_is_folder = 0;
+bool copy_0_move_1 = 0;
 
 Texture2D screen_texture = {0};
 Image screen_image = {0};
@@ -61,19 +57,21 @@ bool mouse_was_down[3] = {0};
 Camera2D camera = {0};
 Shader shader = {0};
 
-std::vector<ProcessInfo> processes;
-#define PROCESS_FETCH_INTERVAL 5
-double last_processes_get_time = -PROCESS_FETCH_INTERVAL; //seconds
 
-int view_begin(const char *name) {
+int view_begin(const char *name, bool forced = 0) {
 	const int pad_x = 50;
 	const int pad_y = 50;
-	return nk_begin(ctx, name,
-		nk_rect(pad_x, pad_y, screen_client.getWidth() / 2 - pad_x * 2, screen_client.getHeight() / 2 - pad_y * 2),
-		NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE | NK_WINDOW_MOVABLE);
+	const struct nk_rect rc = nk_rect(pad_x, pad_y, screen_client.getWidth() / 2 - pad_x * 2, screen_client.getHeight() / 2 - pad_y * 2);
+	if (!forced)
+		return nk_begin(ctx, name, rc, NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE | NK_WINDOW_MOVABLE);
+	return nk_begin(ctx, name, rc, NK_WINDOW_TITLE);
 }
 
 void ProcessesView(nk_context *ctx, char type) {
+	static std::vector<ProcessInfo> processes;
+	const static int PROCESS_FETCH_INTERVAL = 5; //seconds
+	static double last_processes_get_time = -PROCESS_FETCH_INTERVAL;
+
 	double time = GetTime();
 	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
 		processes = control_client.getProcesses();
@@ -127,7 +125,176 @@ void ProcessesView(nk_context *ctx, char type) {
 	nk_end(ctx);
 }
 
+void FileOperationPopup(nk_context *ctx) {
+	static fs::path current_dir = "";
+	static std::string selected_entry = "";
+	static std::vector<FileInfo> files_list;
+	const static int FILELIST_FETCH_INTERVAL = 5; //seconds
+	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
+
+
+	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
+		current_dir = fs::path(control_client.getDefaultLocation());
+	}
+
+	double time = GetTime();
+	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
+		files_list = control_client.listDir(current_dir.string());
+		last_files_get_time = time;
+	}
+
+	if (view_begin("Select destination", 1)) {
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 2);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_end(ctx);
+		nk_select_label(ctx, "From", NK_TEXT_LEFT, 0);
+		nk_select_label(ctx, from_path.string().c_str(), NK_TEXT_LEFT, 1);
+		nk_select_label(ctx, "To", NK_TEXT_LEFT, 0);
+		if (current_dir == "")
+			nk_select_label(ctx, "Drives", NK_TEXT_LEFT, 1);
+		else
+			nk_select_label(ctx, current_dir.string().c_str(), NK_TEXT_LEFT, 1);
+		nk_layout_row_dynamic(ctx, nk_window_get_height(ctx) - UI_LINE_HEIGHT * 5, 1);
+		if (nk_group_begin(ctx, "Group", NK_WINDOW_BORDER)) {
+			nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+			nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT);
+			nk_layout_row_template_push_dynamic(ctx);
+			nk_layout_row_template_end(ctx);
+
+			struct nk_style_selectable selectable = ctx->style.selectable;
+			ctx->style.selectable.hover = nk_style_item_color(nk_rgb(42,42,42));
+
+			for (auto &entry: files_list) {
+				switch (entry.type) {
+					case ENTRY_FILE: continue; //ignore files
+					case ENTRY_FOLDER: nk_image(ctx, folder_img); break;
+					case ENTRY_PARENT: nk_image(ctx, parent_img); break;
+					case ENTRY_DRIVE: nk_image(ctx, drive_img); break;
+				}
+				
+				int is_selected = selected_entry == entry.name;
+				struct nk_rect bounds = nk_widget_bounds(ctx);
+				int is_hover = nk_widget_is_hovered(ctx);
+				if (nk_select_label(ctx, entry.name.c_str(), NK_TEXT_LEFT, is_selected)) {
+					if (selected_entry != entry.name)
+						selected_entry = entry.name;
+					if (time - last_click <= MOUSE_DOUBLE_CLICK_SECONDS && is_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+						last_click = 0;
+						switch (entry.type) {
+							case ENTRY_FILE:
+								last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
+								break;
+							case ENTRY_FOLDER:
+								current_dir /= entry.name;
+								break;
+							case ENTRY_PARENT:
+								if (current_dir == current_dir.root_path()) current_dir = "";
+								else current_dir = current_dir.parent_path().string();
+								break;
+							case ENTRY_DRIVE:
+								current_dir = entry.name + ":\\";
+								break;
+						}
+						last_files_get_time -= FILELIST_FETCH_INTERVAL;
+						selected_entry = "";
+					}
+				}
+
+			}
+			ctx->style.selectable = selectable;
+			nk_group_end(ctx);
+		}
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_end(ctx);
+
+		nk_label(ctx, "", NK_TEXT_LEFT); //Pad
+		if (current_dir == "") { //Disable
+			struct nk_style_button button;
+			button = ctx->style.button;
+			ctx->style.button.normal = nk_style_item_color(nk_rgb(40,40,40));
+			ctx->style.button.hover = nk_style_item_color(nk_rgb(40,40,40));
+			ctx->style.button.active = nk_style_item_color(nk_rgb(40,40,40));
+			ctx->style.button.border_color = nk_rgb(60,60,60);
+			ctx->style.button.text_background = nk_rgb(60,60,60);
+			ctx->style.button.text_normal = nk_rgb(60,60,60);
+			ctx->style.button.text_hover = nk_rgb(60,60,60);
+			ctx->style.button.text_active = nk_rgb(60,60,60);
+			nk_button_label(ctx, "Confirm");
+			ctx->style.button = button;
+		}
+		else {
+			if (nk_button_label(ctx, "Confirm")) {
+				if (from_is_folder)
+					to_path = current_dir / from_path.filename();
+				if (control_client.checkExist(from_path.string(), to_path.string())) {
+					file_popup = 1;
+				}
+				else {
+					from_path = "";
+				}
+			}
+		}
+		nk_label(ctx, "", NK_TEXT_LEFT); //Pad
+		if (nk_button_label(ctx, "Cancel")) {
+			from_path = "";
+		}
+		nk_label(ctx, "", NK_TEXT_LEFT); //Pad
+
+		//Popup
+		if (file_popup) {
+			const int popup_width = 300;
+			const int popup_height = 108;
+			const struct nk_rect s = {nk_window_get_width(ctx) / 2 - popup_width / 2, nk_window_get_height(ctx) / 2 - popup_height / 2, popup_width, popup_height};
+			if (nk_popup_begin(ctx, NK_POPUP_STATIC, "Replace or Skip files", NK_WINDOW_TITLE | NK_WINDOW_NO_SCROLLBAR, s)) {
+				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+				nk_label(ctx, "Destination has files of the same name.", NK_TEXT_LEFT);
+				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 3);
+				if (nk_button_label(ctx, "Overwrite")) {
+					file_popup = 0;
+					if (copy_0_move_1)
+						control_client.requestMove(from_path.string(), to_path.string(), 1);
+					else
+						control_client.requestCopy(from_path.string(), to_path.string(), 1);
+					from_path = "";
+					nk_popup_close(ctx);
+				}
+				if (nk_button_label(ctx, "Skip")) {
+					file_popup = 0;
+					if (copy_0_move_1)
+						control_client.requestMove(from_path.string(), to_path.string(), 0);
+					else
+						control_client.requestCopy(from_path.string(), to_path.string(), 0);
+					from_path = "";
+					nk_popup_close(ctx);
+				}
+				if (nk_button_label(ctx, "Cancel")) {
+					file_popup = 0;
+					from_path = "";
+					nk_popup_close(ctx);
+				}
+				nk_popup_end(ctx);
+			} else file_popup = nk_false;
+		}
+	}
+	else {
+		from_path = "";
+	}
+	nk_end(ctx);
+}
+
 void DirectoryView(nk_context *ctx) {
+	static fs::path current_dir = "";
+	static std::string selected_entry = "";
+	static std::vector<FileInfo> files_list;
+	const static int FILELIST_FETCH_INTERVAL = 5; //seconds
+	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
+
 	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
 		current_dir = fs::path(control_client.getDefaultLocation());
 	}
@@ -163,10 +330,11 @@ void DirectoryView(nk_context *ctx) {
 			
 			int is_selected = selected_entry == entry.name;
 			struct nk_rect bounds = nk_widget_bounds(ctx);
+			int is_hover = nk_widget_is_hovered(ctx);
 			if (nk_select_label(ctx, entry.name.c_str(), NK_TEXT_LEFT, is_selected)) {
 				if (selected_entry != entry.name)
 					selected_entry = entry.name;
-				if (time - last_click <= MOUSE_DOUBLE_CLICK_SECONDS && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+				if (time - last_click <= MOUSE_DOUBLE_CLICK_SECONDS && is_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
 					last_click = 0;
 					switch (entry.type) {
 						case ENTRY_FILE:
@@ -187,32 +355,18 @@ void DirectoryView(nk_context *ctx) {
 					selected_entry = "";
 				}
 			}
+			if (entry.type == ENTRY_DRIVE) continue; //Skip drives
 			if (nk_contextual_begin(ctx, 0, nk_vec2(150, 200), bounds)) {
 				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
-				if (nk_contextual_item_image_label(ctx, open_img, "Open", NK_TEXT_CENTERED)) {
-					switch (entry.type) {
-						case ENTRY_FILE:
-							last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
-							break;
-						case ENTRY_FOLDER:
-							current_dir /= entry.name;
-							break;
-						case ENTRY_PARENT:
-							if (current_dir == current_dir.root_path()) current_dir = "";
-							else current_dir = current_dir.parent_path().string();
-							break;
-						case ENTRY_DRIVE:
-							current_dir = entry.name + ":\\";
-							break;
-					}
-					last_files_get_time -= FILELIST_FETCH_INTERVAL;
-					selected_entry = "";
-				}
 				if (nk_contextual_item_image_label(ctx, copy_img, "Copy", NK_TEXT_CENTERED)) {
-					std::cout << "Copy " << entry.name << std::endl;
+					from_path = current_dir / entry.name;
+					copy_0_move_1 = 0;
+					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, move_img, "Move", NK_TEXT_CENTERED)) {
-					std::cout << "Move " << entry.name << std::endl;
+					from_path = current_dir / entry.name;
+					copy_0_move_1 = 1;
+					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, delete_img, "Delete", NK_TEXT_CENTERED)) {
 					std::cout << "Delete " << entry.name << std::endl;
@@ -222,7 +376,8 @@ void DirectoryView(nk_context *ctx) {
 
 		}
 		ctx->style.selectable = selectable;
-	} else {
+	}
+	else {
 		current_view = VIEW_NONE;
 	}
 	nk_end(ctx);
@@ -267,7 +422,7 @@ void NuklearView(nk_context *ctx) {
 			ProcessesView(ctx, 0);
 			break;
 		case VIEW_DIRECTORY:
-			DirectoryView(ctx);
+			from_path == "" ? DirectoryView(ctx) : FileOperationPopup(ctx);
 			break;
 		case VIEW_SETTINGS:
 			break;
@@ -375,7 +530,7 @@ int main(void) {
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
-	InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "3ChangDev");
+	InitWindow(960, 540, "3ChangDev");
 	InitAudioDevice();
 	SetExitKey(0); //Prevent app from closing when pressing ESC key
 

@@ -2,6 +2,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <thread>
 #include <asio.hpp>
 #include "types.h"
 #include "processes.h"
@@ -121,16 +122,35 @@ private:
 					}
 					break;
 				}
-				case FS_COPY:
+				case FS_CHECK_EXIST: {
+					std::string from = readString();
+					std::string to = readString();
+					bool exist = filesystem_check_exist(from, to);
+					write(&exist, sizeof(bool));
 					break;
-				case FS_MOVE:
+				}
+				case FS_COPY: {
+					std::string from = readString();
+					std::string to = readString();
+					std::cout << "Copy " << from << " to " << to << std::endl;
+					bool overwrite = read<bool>();
 					break;
-				case FS_WRITE:
+				}
+				case FS_MOVE: {
+					std::string from = readString();
+					std::string to = readString();
+					bool overwrite = read<bool>();
+					std::cout << "Move " << from << " to " << to << std::endl;
 					break;
-				case FS_ASK_OPTION:
+				}
+				case FS_WRITE: {
 					break;
-				case FS_DELETE:
+				}
+				case FS_DELETE: {
+					std::string path = readString();
+					std::cout << "Delete " << path << std::endl;
 					break;
+				}
 			}
 			asio::async_read(socket_, asio::buffer(&opcode, sizeof(OperationCode)), 
 				std::bind(&ControlConnection::handle_read, shared_from_this(), std::placeholders::_1));

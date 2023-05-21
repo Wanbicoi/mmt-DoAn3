@@ -31,10 +31,10 @@ enum OperationCode : uint16_t {
 	//File system
 	FS_INIT,
 	FS_LIST,
+	FS_CHECK_EXIST,
 	FS_COPY,
 	FS_MOVE,
 	FS_WRITE,
-	FS_ASK_OPTION,
 	FS_DELETE
 };
 
