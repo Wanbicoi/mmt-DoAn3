@@ -208,11 +208,6 @@ std::vector<ProcessInfo> ControlClient::getProcesses() {
 	return processes;
 }
 
-void ControlClient::mouseLeftDown(MousePosition mp) {
-	sendControl(MOUSE_LEFT_DOWN);
-	sendData(&mp, sizeof(MousePosition));
-}
-
 std::string ControlClient::getDefaultLocation() {
 	sendControl(FS_INIT);
 	std::string res;

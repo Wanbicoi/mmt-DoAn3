@@ -471,8 +471,6 @@ void UpdateFrame() {
 	}
 
 	const int mouse_type[] = {MOUSE_LEFT_BUTTON, MOUSE_MIDDLE_BUTTON, MOUSE_RIGHT_BUTTON};
-	const OperationCode mouse_op_down[] = {MOUSE_LEFT_DOWN, MOUSE_MIDDLE_DOWN, MOUSE_RIGHT_DOWN};
-	const OperationCode mouse_op_up[] = {MOUSE_LEFT_UP, MOUSE_MIDDLE_UP, MOUSE_RIGHT_UP};
 
 	if (nk_item_is_any_active(ctx)) { //Nuklear element is interacted/hovered
 		//Interact
@@ -495,14 +493,14 @@ void UpdateFrame() {
 	if (mouse.x >= 0 && mouse.x <= screen_texture.width && mouse.y >= 0 && mouse.y <= screen_texture.height) { //Inside view bound
 		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
 			for (int i = 0; i < 3; i++) {
-				if (IsMouseButtonDown(mouse_type[i])) {
-					MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
-					control_client.mouseLeftDown(mp);
-					//control_client.sendControl(mouse_op_down[i]);
-				}
-				if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
-					//control_client.sendControl(mouse_op_up[i]);
-				}
+				// if (IsMouseButtonDown(mouse_type[i])) {
+				// 	MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
+				// 	control_client.mouseLeftDown(mp);
+				// 	//control_client.sendControl(mouse_op_down[i]);
+				// }
+				// if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
+				// 	//control_client.sendControl(mouse_op_up[i]);
+				// }
 			}
 		}
 	}
