@@ -12,6 +12,8 @@ struct ShiftInfo {
 };
 
 const ShiftInfo shiftTable[] = {
+	{32, ' ', ' '},
+
 	{48, '0', ')'},
 	{49, '1', '!'},
 	{50, '2', '@'},

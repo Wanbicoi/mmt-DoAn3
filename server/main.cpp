@@ -85,9 +85,9 @@ int main() {
 
 		std::vector<unsigned char> keys_pressed;
 
-		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
+		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&](bool init) {
 			FrameBuffer buf = {0};
-			
+			if (init) keys_pressed.clear();
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouse_changed;
