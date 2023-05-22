@@ -2,6 +2,7 @@
 //#define TCP_SOCKET_PORT 4435
 #pragma once
 #include <string>
+#include <vector>
 
 #define SOCKET_SCREEN_PORT 5343
 #define SOCKET_CONTROL_PORT 4354
@@ -16,18 +17,6 @@ enum OperationCode : uint16_t {
 	PROCESS_SUSPEND,
 	PROCESS_RESUME,
 	PROCESS_KILL,
-	//Input: Keyboard
-	KEYBOARD_DOWN,
-	//Input: Mouse
-	MOUSE_MOVE,
-	MOUSE_LEFT_DOWN,
-	MOUSE_LEFT_UP,
-	MOUSE_MIDDLE_DOWN,
-	MOUSE_MIDDLE_UP,
-	MOUSE_RIGHT_DOWN,
-	MOUSE_RIGHT_UP,
-	MOUSE_WHEEL_V,
-	MOUSE_WHEEL_H,
 	//File system
 	FS_INIT,
 	FS_LIST,
@@ -43,15 +32,9 @@ struct ScreenInfo {
 	int height;
 };
 
-struct MousePosition {
-	float x;
-	float y;
-	int width;
-	int height;
-};
-
 struct FrameBuffer {
-	bool keys[256];
+	int num_keys_pressed;
+	std::vector<unsigned char> keys_pressed;
 	int mouse_x;
 	int mouse_y;
 	int mouse_changed;

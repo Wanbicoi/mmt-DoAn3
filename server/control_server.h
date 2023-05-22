@@ -6,7 +6,6 @@
 #include <asio.hpp>
 #include "types.h"
 #include "processes.h"
-#include "input.h"
 #include "fs.h"
 using asio::ip::tcp;
 
@@ -88,30 +87,6 @@ private:
 					break;
 				case PROCESS_KILL:
 					terminate_process(read<int>());
-					break;
-				case MOUSE_MOVE: {
-					MousePosition mp = read<MousePosition>();
-					//mouse_move(mp.x, mp.y, mp.width, mp.height);
-					break;
-				}
-				case MOUSE_LEFT_DOWN: {
-					MousePosition mp = read<MousePosition>();
-					//mouse_left_down(mp.x, mp.y, mp.width, mp.height);
-					break;
-				}
-				case MOUSE_LEFT_UP:
-					break;
-				case MOUSE_MIDDLE_DOWN:
-					break;
-				case MOUSE_MIDDLE_UP:
-					break;
-				case MOUSE_RIGHT_DOWN:
-					break;
-				case MOUSE_RIGHT_UP:
-					break;
-				case MOUSE_WHEEL_V:
-					break;
-				case MOUSE_WHEEL_H:
 					break;
 				case FS_INIT: {
 					write(filesystem_get_default_location());
