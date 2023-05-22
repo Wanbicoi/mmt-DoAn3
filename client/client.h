@@ -83,6 +83,8 @@ public:
 
 	std::vector<ProcessInfo> getProcesses();
 
+	void mouseLeftDown(MousePosition mp);
+
 	std::string getDefaultLocation();
 
 	std::vector<FileInfo> listDir(std::string path);

@@ -492,16 +492,14 @@ void UpdateFrame() {
 	if (mouse.x >= 0 && mouse.x <= screen_texture.width && mouse.y >= 0 && mouse.y <= screen_texture.height) { //Inside view bound
 		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
 			for (int i = 0; i < 3; i++) {
-				if (IsMouseButtonPressed(mouse_type[i])) {
+				if (IsMouseButtonDown(mouse_type[i])) {
 					std::cout << mouse.x << " | " << mouse.y << std::endl;
 					MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
-					//control_client.sendControl(MOUSE_MOVE, sizeof(mp), &mp);
+					control_client.mouseLeftDown(mp);
 					//control_client.sendControl(mouse_op_down[i]);
-					mouse_was_down[i] = 1;
 				}
 				if (mouse_was_down[i] && IsMouseButtonReleased(mouse_type[i])) {
 					//control_client.sendControl(mouse_op_up[i]);
-					mouse_was_down[i] = 0;
 				}
 			}
 		}
@@ -523,8 +521,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.2.7");
-	control_client.connect("192.168.2.7");
+	screen_client.connect("192.168.2.6");
+	control_client.connect("192.168.2.6");
 
 	screen_client.init();
 
