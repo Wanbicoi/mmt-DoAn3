@@ -10,7 +10,7 @@ private:
 
 	ScreenInfo screen_info = {1080, 720};
 
-	char keys[256] = {0};
+	bool keys[256] = {0};
 
 	unsigned char *screen_data = nullptr;
 	std::atomic<bool> screen_changed = 0;
@@ -44,7 +44,7 @@ public:
 
 	bool isMouseImgChanged();
 
-	char* getKeys();
+	bool* getKeys();
 
 	unsigned char* getScreenData();
 

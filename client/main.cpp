@@ -7,6 +7,7 @@
 #include "fragment.h"
 #include "types.h"
 #include "client.h"
+#include "key_visualizer.h"
 #include <iostream>
 #include <thread>
 #include <filesystem>
@@ -57,6 +58,7 @@ bool mouse_was_down[3] = {0};
 Camera2D camera = {0};
 Shader shader = {0};
 
+KeyVisualizer key_visualizer;
 
 int view_begin(const char *name, bool forced = 0) {
 	const int pad_x = 50;
@@ -436,7 +438,7 @@ void UpdateFrame() {
 	NuklearView(ctx);
 	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
 		last_click = GetTime();
-
+	key_visualizer.update();
 	//Get mouse location and whether mouse image has changed
 	if (screen_client.isFrameChanged()) {
 		screen_client.getMouseInfo(&mouse_x, &mouse_y);
@@ -455,6 +457,7 @@ void UpdateFrame() {
 		}
 		unsigned char *screen_data = screen_client.getScreenData();
 		UpdateTexture(screen_texture, screen_data);
+		key_visualizer.setKeys(screen_client.getKeys());
 	}
 
 	if (IsWindowResized()) {
@@ -493,7 +496,6 @@ void UpdateFrame() {
 		if (mouse_interacting_nuklear == MOUSE_NONE) { //Mouse not occupied by GUI
 			for (int i = 0; i < 3; i++) {
 				if (IsMouseButtonDown(mouse_type[i])) {
-					std::cout << mouse.x << " | " << mouse.y << std::endl;
 					MousePosition mp = {mouse.x, mouse.y, screen_texture.width, screen_texture.height};
 					control_client.mouseLeftDown(mp);
 					//control_client.sendControl(mouse_op_down[i]);
@@ -513,16 +515,16 @@ void UpdateFrame() {
 				DrawTexture(mouse_texture, mouse_x, mouse_y, WHITE);
 			EndShaderMode();
 		EndMode2D();
+		key_visualizer.draw();
 		DrawNuklear(ctx);
 		DrawFPS(10, GetScreenHeight() - 20);
-		//DrawText(TextFormat("%d", mouse_interacting_nuklear), 10, GetScreenHeight() - 20, 20, GREEN);
 	EndDrawing();
 }
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.2.6");
-	control_client.connect("192.168.2.6");
+	screen_client.connect("192.168.2.7");
+	control_client.connect("192.168.2.7");
 
 	screen_client.init();
 
@@ -539,6 +541,7 @@ int main(void) {
 	const int fontSize = 16;
 	Font font = LoadFontEx("resource/Roboto-Medium.ttf", fontSize, NULL, 0);
 	ctx = InitNuklearEx(font, fontSize);
+	key_visualizer.setFont(font, fontSize);
 	pause_img = LoadNuklearImage("resource/pause.png");
 	play_img = LoadNuklearImage("resource/play.png");
 	stop_img = LoadNuklearImage("resource/stop.png");

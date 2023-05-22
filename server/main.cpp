@@ -9,6 +9,10 @@
 #include "control_server.h"
 using asio::ip::tcp;
 
+void IoContextRun(asio::io_context &io_context) {
+	io_context.run();
+}
+
 int main() {
 	auto mons = SL::Screen_Capture::GetMonitors();
 	mons.resize(1);
@@ -78,14 +82,16 @@ int main() {
 			return -2;
 		}
 
+		std::atomic<bool> keys_pressed[256] = {0};
+
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
-			FrameBuffer buf;
+			FrameBuffer buf = {0};
 			for (int i = 1; i <= 254; i++) {
-				short res = GetAsyncKeyState(i);
-				if (res & 0x8000)
-					buf.keys[i] = 1;
-				else
-					buf.keys[i] = 0;
+				buf.keys[i] = keys_pressed[i];
+				if (GetAsyncKeyState(i) & 0x8000) { //During hold
+					keys_pressed[i] = 1;
+				}
+				else keys_pressed[i] = 0;
 			}
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
@@ -110,7 +116,15 @@ int main() {
 		ControlServer control_server(io_context, [&]() {
 
 		});
-		io_context.run();
+		std::thread socket_thread(IoContextRun, std::ref(io_context));
+		
+		while (1) {
+			for (int i = 1; i <= 254; i++) {
+				if (GetAsyncKeyState(i) & 0x8000) { //MSB
+					keys_pressed[i] = 1;
+				}
+			}
+		}
 
 	}
 	catch (std::exception &e) {

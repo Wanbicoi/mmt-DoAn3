@@ -91,11 +91,14 @@ private:
 					break;
 				case MOUSE_MOVE: {
 					MousePosition mp = read<MousePosition>();
-					mouse_move(mp.x, mp.y, mp.width, mp.height);
+					//mouse_move(mp.x, mp.y, mp.width, mp.height);
 					break;
 				}
-				case MOUSE_LEFT_DOWN:
+				case MOUSE_LEFT_DOWN: {
+					MousePosition mp = read<MousePosition>();
+					//mouse_left_down(mp.x, mp.y, mp.width, mp.height);
 					break;
+				}
 				case MOUSE_LEFT_UP:
 					break;
 				case MOUSE_MIDDLE_DOWN:
