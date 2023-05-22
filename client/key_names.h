@@ -1,4 +1,5 @@
 //https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+
 const char *key_names[256] = {
 	/* 0 | 0x0 */ "",
 	/* 1 | 0x1 */ "Left mouse button",

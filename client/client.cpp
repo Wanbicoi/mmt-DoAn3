@@ -23,7 +23,7 @@ void ScreenClient::handleRead(std::error_code error) {
 		asio::error_code ignored_error;
 		FrameBuffer buffer;
 		getData(&buffer, sizeof(FrameBuffer));
-		memcpy(key, buffer.key, 256);
+		memcpy(keys, buffer.keys, 256);
 		mouse_x = buffer.mouse_x;
 		mouse_y = buffer.mouse_y;
 		if (buffer.mouse_changed) {
@@ -99,7 +99,7 @@ bool ScreenClient::isMouseImgChanged() {
 }
 
 char* ScreenClient::getKeys() {
-	return key;
+	return keys;
 }
 
 unsigned char* ScreenClient::getScreenData() {

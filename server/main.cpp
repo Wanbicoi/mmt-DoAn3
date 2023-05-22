@@ -80,12 +80,12 @@ int main() {
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
 			FrameBuffer buf;
-			for (int i = 0; i < 256; i++) {
+			for (int i = 1; i <= 254; i++) {
 				short res = GetAsyncKeyState(i);
 				if (res & 0x8000)
-					buf.key[i] = 1;
+					buf.keys[i] = 1;
 				else
-					buf.key[i] = 0;
+					buf.keys[i] = 0;
 			}
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
