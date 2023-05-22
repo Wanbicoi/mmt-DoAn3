@@ -3,6 +3,7 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <iostream>
 
 struct ShiftInfo {
 	unsigned char key;
@@ -112,17 +113,15 @@ private:
 	}
 	
 public:
-	void setKeys(bool *frame_keys) {
+	void setKeys(const std::vector<unsigned char> &keys_pressed) {
 		double time = GetTime();
-		bool shift = frame_keys[16];
-		for (unsigned char i = 1; i <= 254; i++) {
-			if (i == 16 || i == 17 || i == 18) continue; //skip non-sided shift, ctrl and alt
-			if (frame_keys[i]) {
-				if (!key_entries.empty() && key_entries.back().key == i)
-					key_entries.back().time = time; //Update time instead of adding to queue
-				else
-					key_entries.push_back({i, time, isAscii(i), shift});
-			}
+		bool shift = 0;
+		for (auto &key: keys_pressed)
+			if (key == 16) shift = 1;
+
+		for (auto &key: keys_pressed) {
+			if (key == 16 || key == 17 || key == 18) continue; //skip non-sided shift, ctrl and alt
+			key_entries.push_back({key, time, isAscii(key), shift});
 		}
 	}
 

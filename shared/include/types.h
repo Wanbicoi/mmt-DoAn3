@@ -33,7 +33,8 @@ struct ScreenInfo {
 };
 
 struct FrameBuffer {
-	bool keys[256];
+	int num_keys_pressed;
+	std::vector<unsigned char> keys_pressed;
 	int mouse_x;
 	int mouse_y;
 	int mouse_changed;

@@ -43,9 +43,8 @@ private:
 				if (buffer.mouse_changed) {
 					write(buffer.mouse_data, buffer.mouse_size);
 				}
-				if (buffer.screen_changed) {
-					write(buffer.screen_data, buffer.screen_size);
-				}
+				write(buffer.keys_pressed.data(), buffer.num_keys_pressed);
+				write(buffer.screen_data, buffer.screen_size);
 				OperationCode opcode = FRAME_DATA;
 				asio::async_write(socket_, asio::buffer(&opcode, sizeof(OperationCode)),
 					std::bind(&ScreenConnection::handle_write, shared_from_this(), std::placeholders::_1));

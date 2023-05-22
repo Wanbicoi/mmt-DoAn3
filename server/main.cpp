@@ -7,6 +7,7 @@
 #include "ScreenCapture.h"
 #include "screen_server.h"
 #include "control_server.h"
+#include "input.h"
 using asio::ip::tcp;
 
 void IoContextRun(asio::io_context &io_context) {
@@ -82,17 +83,11 @@ int main() {
 			return -2;
 		}
 
-		std::atomic<bool> keys_pressed[256] = {0};
+		std::vector<unsigned char> keys_pressed;
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&]() {
 			FrameBuffer buf = {0};
-			for (int i = 1; i <= 254; i++) {
-				buf.keys[i] = keys_pressed[i];
-				if (GetAsyncKeyState(i) & 0x8000) { //During hold
-					keys_pressed[i] = 1;
-				}
-				else keys_pressed[i] = 0;
-			}
+			
 			buf.mouse_x = mouse_x;
 			buf.mouse_y = mouse_y;
 			buf.mouse_changed = mouse_changed;
@@ -108,6 +103,9 @@ int main() {
 			screen_changed = false;
 			if (buf.screen_changed) {
 				mouse_changed = false;
+				buf.keys_pressed = keys_pressed;
+				buf.num_keys_pressed = buf.keys_pressed.size();
+				keys_pressed.clear();
 				buf.screen_size = screen_buffer_size;
 				buf.screen_data = screen_buffer.get();
 			}
@@ -120,9 +118,8 @@ int main() {
 		
 		while (1) {
 			for (int i = 1; i <= 254; i++) {
-				if (GetAsyncKeyState(i) & 0x8000) { //MSB
-					keys_pressed[i] = 1;
-				}
+				if (GetKeySinceLastCall(i))
+					keys_pressed.push_back(i);
 			}
 		}
 
