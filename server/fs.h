@@ -101,15 +101,43 @@ bool filesystem_check_exist(const std::string &from, const std::string &to) {
 
 //parent should not end with slash
 int filesystem_copy(const std::string &from, const std::string &to, bool overwrite) {
-	std::cout << "Copy " << from << " | " << to << std::endl;
-	if (overwrite) std::cout << "overwrite!\n";
-	auto copy_options = fs::copy_options::recursive;
-	if (overwrite) copy_options |= fs::copy_options::overwrite_existing;
-	else copy_options |= fs::copy_options::skip_existing;
+	//Copy_options is apparently broken on MinGW (overwrite options not accounted for)
+	//Delete file if exists and overwrite = true and copy.
 	std::error_code error;
 
-	fs::copy(from, to, copy_options, error);
-	std::cout << error.message() << std::endl;
+	fs::path from_path(from);
+	fs::path to_path(to);
+
+	if (is_folder(from_path) && is_folder(to_path)) {
+		for (const auto& entry : fs::recursive_directory_iterator(from_path)) {
+			fs::path to_entry_path = to_path / entry.path().lexically_relative(from_path);
+			if (is_file(entry.path())) {
+				if (is_file(to_entry_path)) {
+					if (overwrite) {
+						fs::remove(to_entry_path, error);
+						fs::copy(entry.path(), to_entry_path, error);
+					}
+				}
+				else {
+					fs::copy(entry.path(), to_entry_path, error);
+				}
+			}
+			else if (is_folder(entry.path())) {
+				fs::create_directories(to_entry_path, error);
+			}
+		}
+	}
+	else {
+		if (is_file(to_path)) {
+			if (overwrite) {
+				fs::remove(to_path);
+				fs::copy(from, to, error);
+			}
+		}
+		else {
+			fs::copy(from, to, error);
+		}
+	}
 	return error.value();
 }
 
@@ -127,8 +155,10 @@ int filesystem_rename(const std::string &from, const std::string &to, bool overw
 			if (is_file(entry.path())) {
 				std::cout << "Entry " << to_entry_path << std::endl;
 				if (is_file(to_entry_path)) {
-					if (overwrite)
+					if (overwrite) {
+						fs::remove(to_entry_path, error);
 						fs::rename(entry.path(), to_entry_path, error);
+					}
 				}
 				else {
 					fs::rename(entry.path(), to_entry_path, error);
@@ -139,8 +169,17 @@ int filesystem_rename(const std::string &from, const std::string &to, bool overw
 			}
 		}
 	}
-	else
-		fs::rename(from, to, error);
+	else {
+		if (is_file(to_path)) {
+			if (overwrite) {
+				fs::remove(to_path);
+				fs::rename(from, to, error);
+			}
+		}
+		else {
+			fs::rename(from, to, error);
+		}
+	}
 	return error.value();
 }
 
