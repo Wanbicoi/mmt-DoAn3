@@ -169,27 +169,25 @@ class ControlServer {
 public:
 	ControlServer(asio::io_context& io_context, const std::function<void()> &callback)
 		: io_context_(io_context)
-		, acceptor_(io_context, tcp::endpoint(tcp::v4(), SOCKET_CONTROL_PORT))
-		, callback_(callback) {
-		start_accept();
+		, acceptor_(io_context, tcp::endpoint(tcp::v4(), SOCKET_CONTROL_PORT)) {
+		start_accept(callback);
 	}
 
 private:
-	void start_accept() {
-		ControlConnection::pointer new_connection = ControlConnection::create(io_context_, callback_);
+	void start_accept(const std::function<void()> &callback) {
+		ControlConnection::pointer new_connection = ControlConnection::create(io_context_, callback);
 
 		acceptor_.async_accept(new_connection->socket(),
-				std::bind(&ControlServer::handle_accept, this, new_connection, std::placeholders::_1 /*error*/));
+				std::bind(&ControlServer::handle_accept, this, callback, new_connection, std::placeholders::_1 /*error*/));
 	}
 
-	void handle_accept(ControlConnection::pointer new_connection, const asio::error_code& error) {
+	void handle_accept(const std::function<void()> &callback, ControlConnection::pointer new_connection, const asio::error_code& error) {
 		if (!error) {
 			new_connection->start();
 		}
-		start_accept();
+		start_accept(callback);
 	}
 
 	asio::io_context& io_context_;
 	tcp::acceptor acceptor_;
-	const std::function<void()> callback_;
 };

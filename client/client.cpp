@@ -21,30 +21,28 @@ void ScreenClient::getData(void *data, int size) {
 void ScreenClient::handleRead(std::error_code error) {
 	if (!error) {
 		asio::error_code ignored_error;
-		FrameBuffer buffer;
-		getData(&buffer, sizeof(FrameBuffer));
-		//Preventing it to call its destructor
-		memset(&buffer.keys_pressed, 0, sizeof(std::vector<unsigned char>));
-		mouse_x = buffer.mouse_x;
-		mouse_y = buffer.mouse_y;
-		if (buffer.mouse_changed) {
+		FrameBundle frBd;
+		getData(&frBd, sizeof(FrameBundle));
+		mouse_x = frBd.mouse_x;
+		mouse_y = frBd.mouse_y;
+		if (frBd.mouse_changed) {
 			int old_mouse_size = mouse_width * mouse_height * 4;
-			mouse_width = buffer.mouse_width;
-			mouse_height = buffer.mouse_height;
-			mouse_center_x = buffer.mouse_center_x;
-			mouse_center_y = buffer.mouse_center_y;
-			if (old_mouse_size != buffer.mouse_size)
-				mouse_data = (unsigned char*)realloc(mouse_data, buffer.mouse_size);
-			getData(mouse_data, buffer.mouse_size);
+			mouse_width = frBd.mouse_width;
+			mouse_height = frBd.mouse_height;
+			mouse_center_x = frBd.mouse_center_x;
+			mouse_center_y = frBd.mouse_center_y;
+			if (old_mouse_size != frBd.mouse_size)
+				mouse_data = (unsigned char*)realloc(mouse_data, frBd.mouse_size);
+			getData(mouse_data, frBd.mouse_size);
 			mouse_changed = 1;
 		}
-		if (buffer.screen_changed) {
-			keys_pressed.reserve(buffer.num_keys_pressed);
-			unsigned char keys[buffer.num_keys_pressed];
-			getData(keys, buffer.num_keys_pressed);
-			for (int i = 0; i < buffer.num_keys_pressed; i++)
+		if (frBd.screen_changed) {
+			keys_pressed.reserve(frBd.num_keys_pressed);
+			unsigned char keys[frBd.num_keys_pressed];
+			getData(keys, frBd.num_keys_pressed);
+			for (int i = 0; i < frBd.num_keys_pressed; i++)
 				keys_pressed.push_back(keys[i]);
-			getData(screen_data, buffer.screen_size);
+			getData(screen_data, frBd.screen_size);
 			screen_changed = 1;
 		}
 		OperationCode opcode = FRAME_DATA;

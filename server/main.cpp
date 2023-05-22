@@ -86,30 +86,29 @@ int main() {
 		std::vector<unsigned char> keys_pressed;
 
 		ScreenServer screen_server(io_context, {monitor.Width, monitor.Height}, [&](bool init) {
-			FrameBuffer buf = {0};
+			FrameData frDt = {0};
 			if (init) keys_pressed.clear();
-			buf.mouse_x = mouse_x;
-			buf.mouse_y = mouse_y;
-			buf.mouse_changed = mouse_changed;
-			if (buf.mouse_changed) {
-				buf.mouse_width = mouse_width;
-				buf.mouse_height = mouse_height;
-				buf.mouse_center_x = mouse_center_x;
-				buf.mouse_center_y = mouse_center_y;
-				buf.mouse_size = mouse_buffer_size;
-				buf.mouse_data = mouse_buffer;
-			}
-			buf.screen_changed = screen_changed;
+			frDt.bd.mouse_x = mouse_x;
+			frDt.bd.mouse_y = mouse_y;
+			frDt.bd.mouse_changed = mouse_changed;
+			frDt.bd.mouse_width = mouse_width;
+			frDt.bd.mouse_height = mouse_height;
+			frDt.bd.mouse_center_x = mouse_center_x;
+			frDt.bd.mouse_center_y = mouse_center_y;
+			frDt.bd.mouse_size = mouse_buffer_size;
+			frDt.bd.screen_changed = screen_changed;
+			frDt.bd.screen_size = screen_buffer_size;
 			screen_changed = false;
-			if (buf.screen_changed) {
+			
+			frDt.mouse_data = mouse_buffer;
+			frDt.screen_data = screen_buffer.get();
+			if (frDt.bd.screen_changed) {
 				mouse_changed = false;
-				buf.keys_pressed = keys_pressed;
-				buf.num_keys_pressed = buf.keys_pressed.size();
+				frDt.keys_pressed = keys_pressed;
+				frDt.bd.num_keys_pressed = frDt.keys_pressed.size();
 				keys_pressed.clear();
-				buf.screen_size = screen_buffer_size;
-				buf.screen_data = screen_buffer.get();
 			}
-			return buf;
+			return frDt;
 		});
 		ControlServer control_server(io_context, [&]() {
 

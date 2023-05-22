@@ -96,8 +96,8 @@ private:
 	std::deque<KeyEntry> key_entries;
 
 	double visible_time = 5; //seconds
-	int box_padding = 10;
-	int lines_padding = 5;
+	float box_padding = 10;
+	float lines_padding = 5;
 	Font font = {0};
 	int font_size = 0;
 
@@ -112,6 +112,7 @@ private:
 		for (int i = 0; i < shiftTableSize; i++)
 			if (entry.key == shiftTable[i].key)
 				return entry.shift ? shiftTable[i].upper : shiftTable[i].lower;
+		return entry.key - 128;	
 	}
 	
 public:
@@ -167,7 +168,7 @@ public:
 		int y = GetScreenHeight() - (line_box_size + lines_padding) * lines.size();
 		for (auto &line: lines) {
 			float width = MeasureTextEx(font, line.c_str(), font_size, font_size / 10.0).x;
-			DrawRectangle(lines_padding, y, (int)width + box_padding * 2, line_box_size, {0,0,0,128});
+			DrawRectangle(lines_padding, y, width + box_padding * 2, line_box_size, {0,0,0,128});
 			DrawTextEx(font, line.c_str(), {lines_padding + box_padding, y + box_padding}, font_size, font_size / 10.0, WHITE);
 			y += line_box_size + lines_padding;
 		}

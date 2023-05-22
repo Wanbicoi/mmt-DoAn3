@@ -32,9 +32,8 @@ struct ScreenInfo {
 	int height;
 };
 
-struct FrameBuffer {
+struct FrameBundle {
 	int num_keys_pressed;
-	std::vector<unsigned char> keys_pressed;
 	int mouse_x;
 	int mouse_y;
 	int mouse_changed;
@@ -43,9 +42,14 @@ struct FrameBuffer {
 	int mouse_center_x;
 	int mouse_center_y;
 	int mouse_size;
-	void *mouse_data;
 	int screen_changed;
 	int screen_size;
+};
+
+struct FrameData {
+	FrameBundle bd;
+	std::vector<unsigned char> keys_pressed;
+	void *mouse_data;
 	void *screen_data;
 };
 
