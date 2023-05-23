@@ -4,3 +4,5 @@
 [ ] Get key thread
 [ ] List apps
 [ ] Run process
+[ ] FS Write
+[ ] Mouse click
