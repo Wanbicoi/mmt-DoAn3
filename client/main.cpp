@@ -300,6 +300,13 @@ void DirectoryView(nk_context *ctx) {
 		current_dir = fs::path(control_client.getDefaultLocation());
 	}
 
+	if (IsFileDropped()) {
+		FilePathList files_dropped = LoadDroppedFiles();
+		for (int i = 0; i < files_dropped.count; i++)
+			std::cout << files_dropped.paths[i] << std::endl;
+		UnloadDroppedFiles(files_dropped);
+	}
+
 	double time = GetTime();
 	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
 		files_list = control_client.listDir(current_dir.string());
@@ -521,8 +528,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.2.7");
-	control_client.connect("192.168.2.7");
+	screen_client.connect("192.168.1.33");
+	control_client.connect("192.168.1.33");
 
 	screen_client.init();
 

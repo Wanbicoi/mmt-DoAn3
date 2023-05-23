@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <string>
+#include <fstream>
 #include <vector>
 #include "queue.h"
 #include <functional>
@@ -96,12 +97,12 @@ bool filesystem_check_exist(const std::string &from, const std::string &to) {
 		return filesystem_check_exist_dir(from, to);
 	}
 
-	return 1;
+	return 0;
 }
 
 //parent should not end with slash
 int filesystem_copy(const std::string &from, const std::string &to, bool overwrite) {
-	//Copy_options is apparently broken on MinGW (overwrite options not accounted for)
+	//copy_options is apparently broken on MinGW (overwrite_existing option is not accounted for). Do it manually:
 	//Delete file if exists and overwrite = true and copy.
 	std::error_code error;
 
@@ -183,8 +184,19 @@ int filesystem_rename(const std::string &from, const std::string &to, bool overw
 	return error.value();
 }
 
-int filesystem_write(const std::string &path, bool overwrite, void *data, size_t size) {
+bool filesystem_write(const std::string &path, bool overwrite, bool append, const char*data, size_t size) {
+	if (is_file(path))
+		if (!overwrite) return 0;
 
+	std::ofstream file_stream;
+	if (append)	file_stream.open(path, std::ios::app);
+	else file_stream.open(path, std::ios::binary);
+
+	if (file_stream.fail()) return 0;
+
+	file_stream.write(data, size);
+
+	return 1;
 }
 
 int filesystem_delete(const std::string &path) {
