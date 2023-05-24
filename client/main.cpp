@@ -31,9 +31,9 @@ enum View {
 };
 
 struct nk_image
-	pause_img, play_img, stop_img,
-	file_img, folder_img, parent_img, drive_img,
-	open_img, copy_img, move_img, delete_img;
+	pause_img, play_img, stop_img, //proceses
+	file_img, folder_img, parent_img, drive_img, //directory
+	open_img, copy_img, move_img, delete_img; //directory context menu
 
 View current_view = VIEW_INIT;
 
@@ -88,16 +88,20 @@ bool validate_ip_address(const char *ip_address) {
 }
 
 void InitView(nk_context *ctx) {
+	static std::string error_message = "";
 	static char ip_address[16];
-	if (nk_begin(ctx, "Init", {0, 0, GetScreenWidth(), GetScreenHeight()}, 0)) {
+	if (nk_begin(ctx, "Init", nk_rect(0, 0, GetScreenWidth(), GetScreenHeight()), 0)) {
+		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+		nk_select_label(ctx, "Welcome to 3ChangeDev's remote desktop control", NK_TEXT_LEFT, 0);
+		nk_select_label(ctx, "Input the server's IP address in the box below", NK_TEXT_LEFT, 0);
 		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
 		nk_layout_row_template_push_dynamic(ctx);
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 4);
 		nk_layout_row_template_end(ctx);
-		nk_label(ctx, "IP Address", NK_TEXT_LEFT);
+		nk_select_label(ctx, "IP Address", NK_TEXT_CENTERED, 0);
 		nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, ip_address, 16, nk_filter_ip_address);
-		if (nk_button_label(ctx, "Submit")) {
+		if (nk_button_label(ctx, "Connect")) {
 			if (validate_ip_address(ip_address)) {
 				if (screen_client.connect(ip_address) && control_client.connect(ip_address)) {
 					IoContextRun();
@@ -124,8 +128,23 @@ void InitView(nk_context *ctx) {
 					SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
 
 					current_view = VIEW_NONE;
+					error_message = "";
+				}
+				else {
+					error_message = "Cannot connect to server at address " + std::string(ip_address);
 				}
 			}
+			else {
+				error_message = "The address you typed is not valid";
+			}
+		}
+		if (error_message != "") {
+			nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+			nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
+			nk_layout_row_template_push_dynamic(ctx);
+			nk_layout_row_template_end(ctx);
+			nk_select_label(ctx, "", NK_TEXT_LEFT, 0); //Pad
+			nk_select_label(ctx, error_message.c_str(), NK_TEXT_LEFT, 0);
 		}
 	}
 	nk_end(ctx);
@@ -139,6 +158,8 @@ void SettingsView(nk_context *ctx) {
 			screen_client.disconnect();
 			control_client.disconnect();
 			IoContextStop();
+			SetWindowMinSize(500, 300);
+			SetWindowSize(500, 300);
 		}
 
 	} else {
@@ -154,28 +175,20 @@ void NuklearView(nk_context *ctx) {
 	if (nk_begin(ctx, "Nuklear", nk_rect(0, 0, GetScreenWidth(), PANEL_SIZE), NK_WINDOW_NO_SCROLLBAR)) {
 		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 4);
 		if (nk_button_label(ctx, "Applications")) {
-			if (current_view == VIEW_APP)
-				current_view = VIEW_NONE;
-			else 
-				current_view = VIEW_APP;
+			if (current_view == VIEW_APP) current_view = VIEW_NONE;
+			else current_view = VIEW_APP;
 		}
 		if (nk_button_label(ctx, "Procceses")) {
-			if (current_view == VIEW_PROCESS)
-				current_view = VIEW_NONE;
-			else 
-				current_view = VIEW_PROCESS;
+			if (current_view == VIEW_PROCESS) current_view = VIEW_NONE;
+			else current_view = VIEW_PROCESS;
 		}
 		if (nk_button_label(ctx, "Files")) {
-			if (current_view == VIEW_DIRECTORY)
-				current_view = VIEW_NONE;
-			else 
-				current_view = VIEW_DIRECTORY;
+			if (current_view == VIEW_DIRECTORY) current_view = VIEW_NONE;
+			else current_view = VIEW_DIRECTORY;
 		}
 		if (nk_button_label(ctx, "Settings")) {
-			if (current_view == VIEW_SETTINGS)
-				current_view = VIEW_NONE;
-			else 
-				current_view = VIEW_SETTINGS;
+			if (current_view == VIEW_SETTINGS) current_view = VIEW_NONE;
+			else current_view = VIEW_SETTINGS;
 		}
 	}
 	nk_end(ctx);
@@ -251,7 +264,7 @@ void UpdateFrame() {
 		EndMode2D();
 		key_visualizer.draw();
 		DrawNuklear(ctx);
-		DrawFPS(10, GetScreenHeight() - 20);
+		//DrawFPS(10, GetScreenHeight() - 20);
 	EndDrawing();
 }
 
@@ -261,7 +274,8 @@ int main(void) {
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
-	InitWindow(960, 540, "3ChangDev");
+	InitWindow(500, 300, "3ChangDev");
+	SetWindowMinSize(500, 300);
 	SetExitKey(0); //Prevent app from closing when pressing ESC key
 
 	//Nuklear GUI Init

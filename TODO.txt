@@ -1,8 +1,8 @@
 [/] UDP
 [ ] DNS-SD
 [x] wchar
-[ ] Get key thread
-[ ] List apps
-[ ] Run process
+[/] Get key thread
+[/] List apps
+[/] Run process
 [x] FS Write
 [/] Mouse click
