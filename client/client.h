@@ -94,6 +94,8 @@ public:
 
 	void requestMove(std::string from, std::string to, bool overwrite);
 
+	void requestWrite(std::string path, bool overwrite, int size, void *data);
+
 	void requestDelete(std::string path);
 
 	void sendDisconnect();

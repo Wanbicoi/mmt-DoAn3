@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <string>
 #include <fstream>
+#include <memory>
 #include <vector>
 #include "queue.h"
 #include <functional>
@@ -184,21 +185,20 @@ std::error_code filesystem_rename(const std::string &from, const std::string &to
 	return error;
 }
 
-bool filesystem_write(const std::string &path, bool overwrite, bool append, const char*data, size_t size) {
+std::error_code filesystem_write(const std::string &path, bool overwrite, bool append, const char data[], size_t size) {
 	fs::path file_path = filesystem_get_unicode_path(path);
 
 	if (is_file(file_path))
-		if (!overwrite) return 0;
+		if (!overwrite) return std::make_error_code(std::errc::file_exists);
 
 	std::ofstream file_stream;
-	if (append)	file_stream.open(file_path, std::ios::app);
-	else file_stream.open(file_path, std::ios::binary);
+	file_stream.open(file_path, std::ios::binary);
 
-	if (file_stream.fail()) return 0;
+	if (file_stream.fail()) return std::make_error_code(std::errc::io_error);
 
 	file_stream.write(data, size);
-
-	return 1;
+	std::error_code no_error;
+	return no_error;
 }
 
 std::error_code filesystem_delete(const std::string &path) {
@@ -223,6 +223,8 @@ struct FSJob {
 	std::string to;
 	bool overwrite;
 	std::function<void(std::error_code)> callback;
+	int data_size;
+	std::shared_ptr<char[]> data_ptr;
 };
 
 class FileSystemWorker {
@@ -248,6 +250,8 @@ public:
 						job.callback(error);
 						break;
 					case FS_JOB_WRITE:
+						error = filesystem_write(job.from, job.overwrite, 0, job.data_ptr.get(), job.data_size);
+						job.callback(error);
 						break;
 					case FS_JOB_DELETE:
 						error = filesystem_delete(job.from);
@@ -259,17 +263,18 @@ public:
 	}
 
 	void queueCopy(std::string from, std::string to, bool overwrite, std::function<void(std::error_code)> callback) {
-		jobs.push_back({FS_JOB_COPY, from, to, overwrite, callback});
+		jobs.push_back({FS_JOB_COPY, from, to, overwrite, callback, 0, nullptr});
 	}
 
 	void queueMove(std::string from, std::string to, bool overwrite, std::function<void(std::error_code)> callback) {
-		jobs.push_back({FS_JOB_MOVE, from, to, overwrite, callback});
+		jobs.push_back({FS_JOB_MOVE, from, to, overwrite, callback, 0, nullptr});
 	}
 
-	void queueWrite(std::function<void(std::error_code)> callback) {
+	void queueWrite(std::string path, bool overwrite, int size, std::shared_ptr<char[]> data, std::function<void(std::error_code)> callback) {
+		jobs.push_back({FS_JOB_WRITE, path, "", overwrite, callback, size, data});
 	}
 
 	void queueDelete(std::string path, std::function<void(std::error_code)> callback) {
-		jobs.push_back({FS_JOB_DELETE, path, "", 0, callback});
+		jobs.push_back({FS_JOB_DELETE, path, "", 0, callback, 0, nullptr});
 	}
 };

@@ -49,6 +49,11 @@ private:
 		return str;
 	}
 
+	void readData(void *data, int size) {
+		asio::error_code error;
+		asio::read(socket_, asio::buffer(data, size));
+	}
+
 	void write(void *data, int size) {
 		asio::error_code error;
 		asio::write(socket_, asio::buffer(data, size), error);
@@ -149,6 +154,18 @@ private:
 					break;
 				}
 				case FS_WRITE: {
+					std::string path = readString();
+					bool overwrite = read<bool>();
+					int size = read<int>();
+					std::cout << "FS_WRITE: " << path << " | " << size << " | ";
+					if (overwrite) std::cout << "Overwrite" << std::endl;
+					else std::cout << "Skip" << std::endl;
+					std::shared_ptr<char[]> data_buffer(new char[size]);
+					readData(data_buffer.get(), size);
+					fs_worker.queueWrite(path, overwrite, size, data_buffer, [](std::error_code error) {
+						if (error)
+							std::cout << "Error during write" << std::endl;
+					});
 					break;
 				}
 				case FS_DELETE: {

@@ -10,6 +10,7 @@
 #include "key_visualizer.h"
 #include <iostream>
 #include <thread>
+#include <fstream>
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -45,10 +46,12 @@ struct nk_image
 
 View current_view = VIEW_NONE;
 
+int MAX_FILE_DROP_SIZE_MB = 16;
 #define MOUSE_DOUBLE_CLICK_SECONDS 0.2
 double last_click = 0;
 
 bool file_popup = 0;
+bool drop_popup = 0;
 fs::path from_path = "";
 fs::path to_path = "";
 bool from_is_folder = 0;
@@ -285,8 +288,9 @@ void FileOperationPopup(nk_context *ctx) {
 					nk_popup_close(ctx);
 				}
 				nk_popup_end(ctx);
-			} else file_popup = nk_false;
+			} else file_popup = 0;
 		}
+
 	}
 	else {
 		from_path = "";
@@ -307,8 +311,30 @@ void DirectoryView(nk_context *ctx) {
 
 	if (IsFileDropped()) {
 		FilePathList files_dropped = LoadDroppedFiles();
-		for (int i = 0; i < files_dropped.count; i++)
-			std::cout << files_dropped.paths[i] << std::endl;
+		// for (int i = 0; i < files_dropped.count; i++)
+		// 	std::cout << files_dropped.paths[i] << std::endl;
+		bool valid = 0;
+		if (files_dropped.count == 1) {
+			fs::path file_path = filesystem_get_unicode_path(files_dropped.paths[0]);
+			if (fs::is_regular_file(file_path)) {
+				std::error_code error;
+				if (fs::file_size(file_path, error) <= MAX_FILE_DROP_SIZE_MB * 1024 * 1024) {
+					valid = 1;
+					std::ifstream file_stream(file_path, std::ios::binary);
+					if (!file_stream.fail()) {
+						file_stream.seekg(0, std::ios::end);
+						size_t length = file_stream.tellg();
+						file_stream.seekg(0, std::ios::beg);
+						char *buffer = new char [length];
+						file_stream.read(buffer, length);
+						fs::path dest_path = current_dir / file_path.filename();
+						control_client.requestWrite(dest_path.string(), 1, length, buffer);
+						delete[] buffer;
+					}
+				}
+			}
+		}
+		if (!valid) drop_popup = 1;
 		UnloadDroppedFiles(files_dropped);
 	}
 
@@ -392,6 +418,18 @@ void DirectoryView(nk_context *ctx) {
 
 		}
 		ctx->style.selectable = selectable;
+
+		if (drop_popup) {
+			const int popup_width = 400;
+			const int popup_height = 100;
+			const struct nk_rect s = {nk_window_get_width(ctx) / 2 - popup_width / 2, nk_window_get_height(ctx) / 2 - popup_height / 2, popup_width, popup_height};
+			if (nk_popup_begin(ctx, NK_POPUP_STATIC, "File drop not allowed", NK_WINDOW_TITLE | NK_WINDOW_CLOSABLE, s)) {
+				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT - 10, 1);
+				nk_label(ctx, "You can only drop one file at a time", NK_TEXT_CENTERED);
+				nk_label(ctx, TextFormat("File dropped can be up to %dMB in size", MAX_FILE_DROP_SIZE_MB), NK_TEXT_CENTERED);
+				nk_popup_end(ctx);
+			} else drop_popup = 0;
+		}
 	}
 	else {
 		current_view = VIEW_NONE;
@@ -442,6 +480,12 @@ void NuklearView(nk_context *ctx) {
 			break;
 		case VIEW_SETTINGS:
 			break;
+	}
+
+	//Clear dropped queue
+	if (IsFileDropped()) {
+		FilePathList files_dropped = LoadDroppedFiles();
+		UnloadDroppedFiles(files_dropped);
 	}
 }
 

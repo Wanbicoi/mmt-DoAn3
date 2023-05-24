@@ -253,6 +253,14 @@ void ControlClient::requestMove(std::string from, std::string to, bool overwrite
 	sendData(&overwrite, sizeof(bool));
 }
 
+void ControlClient::requestWrite(std::string path, bool overwrite, int size, void *data) {
+	sendControl(FS_WRITE);
+	sendString(path);
+	sendData(&overwrite, sizeof(bool));
+	sendData(&size, sizeof(int));
+	sendData(data, size);
+}
+
 void ControlClient::requestDelete(std::string path) {
 	sendControl(FS_DELETE);
 	sendString(path);
