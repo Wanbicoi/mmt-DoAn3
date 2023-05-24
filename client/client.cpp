@@ -45,7 +45,6 @@ void ScreenClient::handleRead(std::error_code error) {
 			getData(screen_data, frBd.screen_size);
 			screen_changed = 1;
 		}
-		OperationCode opcode = FRAME_DATA;
 		asio::async_read(screen_socket, asio::buffer(&opcode, sizeof(OperationCode)),
 			std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
 	}
@@ -77,8 +76,7 @@ void ScreenClient::init() {
 	screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
 	mouse_data = (unsigned char*)malloc(32 * 32 * 4);
 
-	int dummy;
-	asio::async_read(screen_socket, asio::buffer(&dummy, 0),
+	asio::async_read(screen_socket, asio::buffer(&opcode, 0),
 		std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
 }
 
