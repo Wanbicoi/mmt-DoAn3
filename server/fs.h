@@ -7,6 +7,12 @@
 #include <system_error>
 namespace fs = std::filesystem;
 
+fs::path filesystem_get_unicode_path(std::string path) {
+	static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	std::wstring wide = converter.from_bytes(path.c_str());
+	return fs::path(wide);
+}
+
 std::vector<char> filesystem_get_drives() {
 	std::vector<char> drives;
 	for (char letter = 'A'; letter <= 'Z'; ++letter) {
@@ -31,11 +37,11 @@ std::vector<FileInfo> filesystem_list(std::string path) {
 		return drives;
 	} //else
 
-	fs::path origin(path);
+	fs::path origin = filesystem_get_unicode_path(path);
 	std::vector<FileInfo> folders(1, {"..", ENTRY_PARENT});
 	std::vector<FileInfo> files;
 	std::error_code error;
-	for (const auto& entry: fs::directory_iterator(path, error)) {
+	for (const auto& entry: fs::directory_iterator(origin, error)) {
 		if (fs::is_directory(entry.path()))
 			folders.push_back({entry.path().filename().string(), ENTRY_FOLDER});
 		else 
@@ -58,11 +64,8 @@ bool is_file(const fs::path &path) {
 	//return fs::exists(filePath) && fs::is_regular_file(filePath);
 }
 
-bool filesystem_check_exist_file(const std::string &from, const std::string &to) {
-	fs::path source_file(from);
-	fs::path dest_file(to);
-
-	if (is_file(dest_file)) {
+bool filesystem_check_exist_file(const fs::path &from, const fs::path &to) {
+	if (is_file(to)) {
 		//std::cout << "Error: File with the same name already exists in the destination directory." << std::endl;
 		return 1;
 	}
@@ -70,13 +73,10 @@ bool filesystem_check_exist_file(const std::string &from, const std::string &to)
 }
 
 //Whether the destination to already has sub-files of the same name as from's sub-files
-bool filesystem_check_exist_dir(const std::string &from, const std::string &to) {
-	fs::path source_dir(from);
-	fs::path dest_dir(to);
-
-	for (const auto& entry : fs::recursive_directory_iterator(source_dir)) {
+bool filesystem_check_exist_dir(const fs::path &from, const fs::path &to) {
+	for (const auto& entry : fs::recursive_directory_iterator(from)) {
 		if (is_file(entry.path())) {
-			fs::path entry_path = dest_dir / entry.path().lexically_relative(source_dir);
+			fs::path entry_path = to / entry.path().lexically_relative(from);
 			if (is_file(entry_path)) {
 				//std::cout << "Error: File with the same name already exists in the destination folder." << std::endl;
 				return 1;
@@ -87,27 +87,27 @@ bool filesystem_check_exist_dir(const std::string &from, const std::string &to) 
 }
 
 bool filesystem_check_exist(const std::string &from, const std::string &to) {
-	fs::path from_path(from);
-	fs::path to_path(to);
+	fs::path from_path = filesystem_get_unicode_path(from);
+	fs::path to_path = filesystem_get_unicode_path(to);
 
 	if (is_file(from_path)) {
-		return filesystem_check_exist_file(from, to);
+		return filesystem_check_exist_file(from_path, to_path);
 	}
 	else if (is_folder(from_path)) {
-		return filesystem_check_exist_dir(from, to);
+		return filesystem_check_exist_dir(from_path, to_path);
 	}
 
 	return 0;
 }
 
 //parent should not end with slash
-int filesystem_copy(const std::string &from, const std::string &to, bool overwrite) {
+std::error_code filesystem_copy(const std::string &from, const std::string &to, bool overwrite) {
 	//copy_options is apparently broken on MinGW (overwrite_existing option is not accounted for). Do it manually:
 	//Delete file if exists and overwrite = true and copy.
 	std::error_code error;
 
-	fs::path from_path(from);
-	fs::path to_path(to);
+	fs::path from_path = filesystem_get_unicode_path(from);
+	fs::path to_path = filesystem_get_unicode_path(to);
 
 	if (is_folder(from_path) && is_folder(to_path)) {
 		for (const auto& entry : fs::recursive_directory_iterator(from_path)) {
@@ -132,21 +132,21 @@ int filesystem_copy(const std::string &from, const std::string &to, bool overwri
 		if (is_file(to_path)) {
 			if (overwrite) {
 				fs::remove(to_path);
-				fs::copy(from, to, error);
+				fs::copy(from_path, to_path, error);
 			}
 		}
 		else {
-			fs::copy(from, to, error);
+			fs::copy(from_path, to_path, error);
 		}
 	}
-	return error.value();
+	return error;
 }
 
-int filesystem_rename(const std::string &from, const std::string &to, bool overwrite) {
+std::error_code filesystem_rename(const std::string &from, const std::string &to, bool overwrite) {
 	std::error_code error;
 
-	fs::path from_path(from);
-	fs::path to_path(to);
+	fs::path from_path = filesystem_get_unicode_path(from);
+	fs::path to_path = filesystem_get_unicode_path(to);
 
 	//fs::rename on folder requires destination folder to not exist or empty to perform simple relink.
 	//Windows allow merging when doing it via Explorer. This part replicate it
@@ -154,7 +154,7 @@ int filesystem_rename(const std::string &from, const std::string &to, bool overw
 		for (const auto& entry : fs::recursive_directory_iterator(from_path)) {
 			fs::path to_entry_path = to_path / entry.path().lexically_relative(from_path);
 			if (is_file(entry.path())) {
-				std::cout << "Entry " << to_entry_path << std::endl;
+				//std::cout << "Entry " << to_entry_path << std::endl;
 				if (is_file(to_entry_path)) {
 					if (overwrite) {
 						fs::remove(to_entry_path, error);
@@ -174,23 +174,25 @@ int filesystem_rename(const std::string &from, const std::string &to, bool overw
 		if (is_file(to_path)) {
 			if (overwrite) {
 				fs::remove(to_path);
-				fs::rename(from, to, error);
+				fs::rename(from_path, to_path, error);
 			}
 		}
 		else {
-			fs::rename(from, to, error);
+			fs::rename(from_path, to_path, error);
 		}
 	}
-	return error.value();
+	return error;
 }
 
 bool filesystem_write(const std::string &path, bool overwrite, bool append, const char*data, size_t size) {
-	if (is_file(path))
+	fs::path file_path = filesystem_get_unicode_path(path);
+
+	if (is_file(file_path))
 		if (!overwrite) return 0;
 
 	std::ofstream file_stream;
-	if (append)	file_stream.open(path, std::ios::app);
-	else file_stream.open(path, std::ios::binary);
+	if (append)	file_stream.open(file_path, std::ios::app);
+	else file_stream.open(file_path, std::ios::binary);
 
 	if (file_stream.fail()) return 0;
 
@@ -199,10 +201,12 @@ bool filesystem_write(const std::string &path, bool overwrite, bool append, cons
 	return 1;
 }
 
-int filesystem_delete(const std::string &path) {
+std::error_code filesystem_delete(const std::string &path) {
+	fs::path file_path = filesystem_get_unicode_path(path);
+
 	std::error_code error;
-	bool num_deleted = fs::remove_all(path, error);
-	return error.value();
+	bool num_deleted = fs::remove_all(file_path, error);
+	return error;
 }
 
 enum FSJobType : char {
@@ -218,7 +222,7 @@ struct FSJob {
 	std::string from;
 	std::string to;
 	bool overwrite;
-	std::function<void(int)> callback;
+	std::function<void(std::error_code)> callback;
 };
 
 class FileSystemWorker {
@@ -230,7 +234,7 @@ public:
 		while (1) {
 			if (jobs.empty()) std::this_thread::sleep_for(std::chrono::seconds(1));
 			else {
-				int error = 0;
+				std::error_code error;
 				FSJob job = jobs.front();
 				jobs.pop_front();
 				switch (job.type) {
@@ -254,18 +258,18 @@ public:
 		}
 	}
 
-	void queueCopy(std::string from, std::string to, bool overwrite, std::function<void(int)> callback) {
+	void queueCopy(std::string from, std::string to, bool overwrite, std::function<void(std::error_code)> callback) {
 		jobs.push_back({FS_JOB_COPY, from, to, overwrite, callback});
 	}
 
-	void queueMove(std::string from, std::string to, bool overwrite, std::function<void(int)> callback) {
+	void queueMove(std::string from, std::string to, bool overwrite, std::function<void(std::error_code)> callback) {
 		jobs.push_back({FS_JOB_MOVE, from, to, overwrite, callback});
 	}
 
-	void queueWrite(std::function<void(int)> callback) {
+	void queueWrite(std::function<void(std::error_code)> callback) {
 	}
 
-	void queueDelete(std::string path, std::function<void(int)> callback) {
+	void queueDelete(std::string path, std::function<void(std::error_code)> callback) {
 		jobs.push_back({FS_JOB_DELETE, path, "", 0, callback});
 	}
 };

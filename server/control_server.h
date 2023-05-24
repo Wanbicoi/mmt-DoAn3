@@ -63,12 +63,12 @@ private:
 
 	void handle_read(const asio::error_code& error) {
 		if (!error) {
-			std::cout << "Opcode: " << opcode << std::endl;
 			switch (opcode) {
 				// case CONTROL_DISCONNECT:
 				// 	callback_();
 				// 	break;
 				case PROCESS_LIST: {
+					std::cout << "PROCESS_LIST" << std::endl;
 					auto processes = get_current_processes();
 					int size = processes.size();
 					write(&size, sizeof(int));
@@ -79,21 +79,32 @@ private:
 					}
 					break;
 				}
-				case PROCESS_SUSPEND:
-					suspend_process(read<int>());
+				case PROCESS_SUSPEND: {
+					int pid = read<int>();
+					std::cout << "PROCESS_SUSPEND: " << pid << std::endl;
+					suspend_process(pid);
 					break;
-				case PROCESS_RESUME:
-					resume_process(read<int>());
+				}
+				case PROCESS_RESUME: {
+					int pid = read<int>();
+					std::cout << "PROCESS_RESUME: " << pid << std::endl;
+					resume_process(pid);
 					break;
-				case PROCESS_KILL:
-					terminate_process(read<int>());
+				}
+				case PROCESS_KILL: {
+					int pid = read<int>();
+					std::cout << "PROCESS_KILL: " << pid << std::endl;
+					terminate_process(pid);
 					break;
+				}
 				case FS_INIT: {
+					std::cout << "FS_INIT" << std::endl;
 					write(filesystem_get_default_location());
 					break;
 				}
 				case FS_LIST: {
 					std::string path = readString();
+					std::cout << "FS_LIST: " << path << std::endl;
 					auto files_list = filesystem_list(path);
 					int size = files_list.size();
 					write(&size, sizeof(int));
@@ -106,6 +117,7 @@ private:
 				case FS_CHECK_EXIST: {
 					std::string from = readString();
 					std::string to = readString();
+					std::cout << "FS_CHECK_EXIST: " << from << " | " << to << std::endl;
 					bool exist = filesystem_check_exist(from, to);
 					write(&exist, sizeof(bool));
 					break;
@@ -114,11 +126,12 @@ private:
 					std::string from = readString();
 					std::string to = readString();
 					bool overwrite = read<bool>();
-					std::cout << "Copy " << from << " to " << to << std::endl;
-					if (overwrite) std::cout << "overwrite!\n";
-					fs_worker.queueCopy(from, to, overwrite, [](int error) {
+					std::cout << "FS_COPY: " << from << " | " << to << " | ";
+					if (overwrite) std::cout << "Overwrite" << std::endl;
+					else std::cout << "Skip" << std::endl;
+					fs_worker.queueCopy(from, to, overwrite, [](std::error_code error) {
 						if (error)
-							std::cout << "Error during copy: " << error << std::endl;
+							std::cout << "Error during copy: " << error.message() << std::endl;
 					});
 					break;
 				}
@@ -126,10 +139,12 @@ private:
 					std::string from = readString();
 					std::string to = readString();
 					bool overwrite = read<bool>();
-					std::cout << "Move " << from << " to " << to << std::endl;
-					fs_worker.queueMove(from, to, overwrite, [](int error) {
+					std::cout << "FS_MOVE: " << from << " | " << to << " | ";
+					if (overwrite) std::cout << "Overwrite" << std::endl;
+					else std::cout << "Skip" << std::endl;
+					fs_worker.queueMove(from, to, overwrite, [](std::error_code error) {
 						if (error)
-							std::cout << "Error during move: " << error << std::endl;
+							std::cout << "Error during move: " << error.message() << std::endl;
 					});
 					break;
 				}
@@ -138,9 +153,10 @@ private:
 				}
 				case FS_DELETE: {
 					std::string path = readString();
-					fs_worker.queueDelete(path, [](int error) {
+					std::cout << "FS_DELETE: " << path << std::endl;
+					fs_worker.queueDelete(path, [](std::error_code error) {
 						if (error)
-							std::cout << "Error during delete: " << error << std::endl;
+							std::cout << "Error during delete: " << error.message() << std::endl;
 					});
 					break;
 				}

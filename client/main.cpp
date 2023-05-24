@@ -13,6 +13,12 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+fs::path filesystem_get_unicode_path(std::string path) {
+	static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	std::wstring wide = converter.from_bytes(path.c_str());
+	return fs::path(wide);
+}
+
 ScreenClient screen_client;
 ControlClient control_client;
 
@@ -183,11 +189,11 @@ void FileOperationPopup(nk_context *ctx) {
 								last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
 								break;
 							case ENTRY_FOLDER:
-								current_dir /= entry.name;
+								current_dir /= filesystem_get_unicode_path(entry.name);
 								break;
 							case ENTRY_PARENT:
 								if (current_dir == current_dir.root_path()) current_dir = "";
-								else current_dir = current_dir.parent_path().string();
+								else current_dir = current_dir.parent_path();
 								break;
 							case ENTRY_DRIVE:
 								current_dir = entry.name + ":\\";
@@ -228,7 +234,6 @@ void FileOperationPopup(nk_context *ctx) {
 		else {
 			if (nk_button_label(ctx, "Confirm")) {
 				to_path = current_dir / from_path.filename();
-				std::cout << from_path << " | " << to_path << std::endl;
 				if (control_client.checkExist(from_path.string(), to_path.string())) {
 					file_popup = 1;
 				}
@@ -297,7 +302,7 @@ void DirectoryView(nk_context *ctx) {
 	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
 
 	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
-		current_dir = fs::path(control_client.getDefaultLocation());
+		current_dir = filesystem_get_unicode_path(control_client.getDefaultLocation());
 	}
 
 	if (IsFileDropped()) {
@@ -349,11 +354,11 @@ void DirectoryView(nk_context *ctx) {
 							last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
 							break;
 						case ENTRY_FOLDER:
-							current_dir /= entry.name;
+							current_dir /= filesystem_get_unicode_path(entry.name);
 							break;
 						case ENTRY_PARENT:
 							if (current_dir == current_dir.root_path()) current_dir = "";
-							else current_dir = current_dir.parent_path().string();
+							else current_dir = current_dir.parent_path();
 							break;
 						case ENTRY_DRIVE:
 							current_dir = entry.name + ":\\";
@@ -367,20 +372,19 @@ void DirectoryView(nk_context *ctx) {
 			if (nk_contextual_begin(ctx, 0, nk_vec2(150, 200), bounds)) {
 				nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
 				if (nk_contextual_item_image_label(ctx, copy_img, "Copy", NK_TEXT_CENTERED)) {
-					from_path = current_dir / entry.name;
+					from_path = current_dir / filesystem_get_unicode_path(entry.name);
 					to_path = current_dir;
 					copy_0_move_1 = 0;
 					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, move_img, "Move", NK_TEXT_CENTERED)) {
-					from_path = current_dir / entry.name;
+					from_path = current_dir / filesystem_get_unicode_path(entry.name);
 					to_path = current_dir;
 					copy_0_move_1 = 1;
 					from_is_folder = entry.type != ENTRY_FILE;
 				}
 				if (nk_contextual_item_image_label(ctx, delete_img, "Delete", NK_TEXT_CENTERED)) {
-					fs::path del_path = current_dir / entry.name;
-					std::cout << "Delete " << del_path << std::endl;
+					fs::path del_path = current_dir / filesystem_get_unicode_path(entry.name);
 					control_client.requestDelete(del_path.string());
 				}
 				nk_contextual_end(ctx);
@@ -528,8 +532,8 @@ void UpdateFrame() {
 
 int main(void) {
 	//Socket connect
-	screen_client.connect("192.168.1.33");
-	control_client.connect("192.168.1.33");
+	screen_client.connect("192.168.2.7");
+	control_client.connect("192.168.2.7");
 
 	screen_client.init();
 
@@ -539,7 +543,6 @@ int main(void) {
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
 	InitWindow(960, 540, "3ChangDev");
-	InitAudioDevice();
 	SetExitKey(0); //Prevent app from closing when pressing ESC key
 
 	//Nuklear GUI Init
@@ -602,7 +605,6 @@ int main(void) {
 	UnloadTexture(screen_texture);
 	UnloadImage(screen_image);
 	UnloadTexture(mouse_texture);
-	CloseAudioDevice();
 	CloseWindow();
 	return 0;
 }
