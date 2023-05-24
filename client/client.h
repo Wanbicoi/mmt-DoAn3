@@ -31,7 +31,7 @@ private:
 public:
 	ScreenClient();
 
-	void connect(const char *address);
+	bool connect(const char *address);
 
 	bool isConnected();
 
@@ -72,7 +72,7 @@ private:
 public:
 	ControlClient();
 
-	void connect(const char *address);
+	bool connect(const char *address);
 
 	bool isConnected();
 
@@ -102,6 +102,7 @@ public:
 
 	~ControlClient();
 };
+void IoContextPoll();
 
 void IoContextRun();
 

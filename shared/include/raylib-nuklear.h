@@ -154,7 +154,7 @@ nk_raylib_font_get_text_width(nk_handle handle, float height, const char *text, 
         // Grab the text with the cropped length so that it only measures the desired string length.
         const char* subtext = TextSubtext(text, 0, len);
 
-        return (float)MeasureText(subtext, (int)height);
+        return (float)MeasureText(subtext, (int)height) + height / 10.0;
     }
 
     return 0;
@@ -173,7 +173,7 @@ nk_raylib_font_get_text_width_user_font(nk_handle handle, float height, const ch
         const char* subtext = TextSubtext(text, 0, len);
 
         // Spacing is determined by the font size divided by 10.
-        return MeasureTextEx(*(Font*)handle.ptr, subtext, height, height / 10.0f).x;
+        return MeasureTextEx(*(Font*)handle.ptr, subtext, height, height / 10.0f).x + height / 10.0;
     }
 
     return 0;

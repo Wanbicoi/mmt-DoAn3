@@ -51,7 +51,7 @@ void ScreenClient::handleRead(std::error_code error) {
 
 }
 
-void ScreenClient::connect(const char *address) {
+bool ScreenClient::connect(const char *address) {
 	try {
 		std::string raw_ip_address(address);
 		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), SOCKET_SCREEN_PORT);
@@ -64,6 +64,7 @@ void ScreenClient::connect(const char *address) {
 		std::cerr << e.what() << std::endl;
 		connected = 0;
 	}
+	return connected;
 }
 
 bool ScreenClient::isConnected() {
@@ -163,7 +164,7 @@ void ControlClient::sendControl(OperationCode opcode) {
 	sendData(&opcode, sizeof(OperationCode));
 }
 
-void ControlClient::connect(const char *address) {
+bool ControlClient::connect(const char *address) {
 	try {
 		std::string raw_ip_address(address);
 		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), SOCKET_CONTROL_PORT);
@@ -176,6 +177,7 @@ void ControlClient::connect(const char *address) {
 		std::cerr << e.what() << std::endl;
 		connected = 0;
 	}
+	return connected;
 }
 
 bool ControlClient::isConnected() {
@@ -275,10 +277,18 @@ ControlClient::~ControlClient() {
 	//control_socket.close();
 }
 
+bool io_stop = 1;
+
+void IoContextPoll() {
+	while (1)
+		if (!io_stop)
+			io_context.poll();
+}
+
 void IoContextRun() {
-	io_context.run();
+	io_stop = 0;
 }
 
 void IoContextStop() {
-	io_context.stop();
+	io_stop = 1;
 }
