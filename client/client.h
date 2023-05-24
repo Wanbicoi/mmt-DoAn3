@@ -9,6 +9,7 @@ private:
 	bool connected = 0;
 
 	ScreenInfo screen_info = {1080, 720};
+	OperationCode opcode; //dummy for async operations
 
 	std::vector<unsigned char> keys_pressed;
 
