@@ -91,7 +91,7 @@ void InitView(nk_context *ctx) {
 	static char ip_address[16];
 	if (nk_begin(ctx, "Init", {0, 0, GetScreenWidth(), GetScreenHeight()}, 0)) {
 		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
-		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 4);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
 		nk_layout_row_template_push_dynamic(ctx);
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 4);
 		nk_layout_row_template_end(ctx);
@@ -100,10 +100,11 @@ void InitView(nk_context *ctx) {
 		if (nk_button_label(ctx, "Submit")) {
 			if (validate_ip_address(ip_address)) {
 				if (screen_client.connect(ip_address) && control_client.connect(ip_address)) {
-					std::cout << "Connected\n";
 					IoContextRun();
 
 					screen_client.init();
+
+					UnloadTexture(screen_texture);
 					//Screen texture Init
 					Image screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
 					screen_texture = LoadTextureFromImage(screen_image);
@@ -114,6 +115,7 @@ void InitView(nk_context *ctx) {
 					SetWindowMinSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
 					SetWindowSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
 
+					UnloadTexture(mouse_texture);
 					//Mouse texture init
 					Image mouse_image = GenImageColor(32, 32, BLANK);
 					mouse_texture = LoadTextureFromImage(mouse_image);
@@ -125,6 +127,22 @@ void InitView(nk_context *ctx) {
 				}
 			}
 		}
+	}
+	nk_end(ctx);
+}
+
+void SettingsView(nk_context *ctx) {
+	if (view_begin("Settings")) {
+		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+		if (nk_button_label(ctx, "Disconnect")) {
+			current_view = VIEW_INIT;
+			screen_client.disconnect();
+			control_client.disconnect();
+			IoContextStop();
+		}
+
+	} else {
+		current_view = VIEW_NONE;
 	}
 	nk_end(ctx);
 }
@@ -173,6 +191,7 @@ void NuklearView(nk_context *ctx) {
 			from_path == "" ? DirectoryView(ctx) : FileOperationPopup(ctx);
 			break;
 		case VIEW_SETTINGS:
+			SettingsView(ctx);
 			break;
 	}
 
@@ -237,12 +256,7 @@ void UpdateFrame() {
 }
 
 int main(void) {
-	//Socket connect
 	std::thread socket_thread(IoContextPoll);
-	//screen_client.connect("192.168.2.7");
-	//control_client.connect("192.168.2.7");
-
-
 
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
@@ -267,15 +281,13 @@ int main(void) {
 	move_img = LoadNuklearImage("resource/move.png");
 	delete_img = LoadNuklearImage("resource/delete.png");
 
-
 	//Shader to flip RGB channel
 	shader = LoadShaderFromMemory(NULL, fragment_shader);
 
 	while (!WindowShouldClose()) {
 		UpdateFrame();
 	}
-	
-	control_client.sendDisconnect();
+	//Stop socket listening and thread
 	IoContextStop();
 	socket_thread.detach();
 	//Free resources

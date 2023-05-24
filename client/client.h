@@ -33,6 +33,8 @@ public:
 
 	bool connect(const char *address);
 
+	void disconnect();
+
 	bool isConnected();
 
 	void init();
@@ -74,6 +76,8 @@ public:
 
 	bool connect(const char *address);
 
+	void disconnect();
+
 	bool isConnected();
 
 	void suspendProcess(int pid);
@@ -98,10 +102,9 @@ public:
 
 	void requestDelete(std::string path);
 
-	void sendDisconnect();
-
 	~ControlClient();
 };
+
 void IoContextPoll();
 
 void IoContextRun();

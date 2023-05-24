@@ -1,6 +1,8 @@
 #include <iostream>
 #include <asio.hpp>
 #include <functional>
+#include <thread>
+#include <chrono>
 #include "types.h"
 #include "client.h"
 using asio::ip::tcp;
@@ -67,6 +69,12 @@ bool ScreenClient::connect(const char *address) {
 	return connected;
 }
 
+void ScreenClient::disconnect() {
+	connected = 0;
+	screen_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+	screen_socket.close();
+}
+
 bool ScreenClient::isConnected() {
 	return connected;
 }
@@ -74,8 +82,8 @@ bool ScreenClient::isConnected() {
 void ScreenClient::init() {
 	getData(&screen_info, sizeof(ScreenInfo));
 
-	screen_data = (unsigned char*)malloc(getWidth() * getHeight() * 4);
-	mouse_data = (unsigned char*)malloc(32 * 32 * 4);
+	screen_data = (unsigned char*)realloc(screen_data, getWidth() * getHeight() * 4);
+	mouse_data = (unsigned char*)realloc(mouse_data, 32 * 32 * 4);
 
 	asio::async_read(screen_socket, asio::buffer(&opcode, 0),
 		std::bind(&ScreenClient::handleRead, this, std::placeholders::_1 /*error*/));
@@ -125,8 +133,6 @@ unsigned char* ScreenClient::getMouseData(int *width, int *height) {
 ScreenClient::~ScreenClient() {
 	free(screen_data);
 	free(mouse_data);
-	//screen_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
-	//screen_socket.close();
 }
 
 //---------------------------------------------------------------
@@ -178,6 +184,12 @@ bool ControlClient::connect(const char *address) {
 		connected = 0;
 	}
 	return connected;
+}
+
+void ControlClient::disconnect() {
+	connected = 0;
+	control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+	control_socket.close();
 }
 
 bool ControlClient::isConnected() {
@@ -268,21 +280,23 @@ void ControlClient::requestDelete(std::string path) {
 	sendString(path);
 }
 
-void ControlClient::sendDisconnect() {
-	sendControl(CONTROL_DISCONNECT);
-}
+// void ControlClient::sendDisconnect() {
+// 	sendControl(CONTROL_DISCONNECT);
+// }
 
 ControlClient::~ControlClient() {
-	//control_socket.shutdown(asio::ip::tcp::socket::shutdown_both);
-	//control_socket.close();
+
 }
 
 bool io_stop = 1;
 
 void IoContextPoll() {
-	while (1)
+	while (1) {
 		if (!io_stop)
 			io_context.poll();
+		else
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
 }
 
 void IoContextRun() {

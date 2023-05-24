@@ -5,4 +5,4 @@
 [ ] List apps
 [ ] Run process
 [x] FS Write
-[ ] Mouse click
+[/] Mouse click
