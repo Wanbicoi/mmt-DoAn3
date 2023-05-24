@@ -1,6 +1,6 @@
-[ ] UDP
+[/] UDP
 [ ] DNS-SD
-[ ] wchar
+[x] wchar
 [ ] Get key thread
 [ ] List apps
 [ ] Run process
