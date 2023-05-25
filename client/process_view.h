@@ -1,10 +1,9 @@
 void ProcessesView(nk_context *ctx, char type) {
 	static std::vector<ProcessInfo> processes;
-	const static int PROCESS_FETCH_INTERVAL = 2; //seconds
-	static double last_processes_get_time = -PROCESS_FETCH_INTERVAL;
+	static double last_processes_get_time = -PROCESS_FETCH_INTERVAL_SECONDS;
 
 	double time = GetTime();
-	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL) { //5 seconds
+	if (time - last_processes_get_time >= PROCESS_FETCH_INTERVAL_SECONDS) { //5 seconds
 		processes = control_client.getProcesses();
 		last_processes_get_time = time;
 	}
@@ -38,15 +37,15 @@ void ProcessesView(nk_context *ctx, char type) {
 				nk_label(ctx, TextFormat("%s", process.name.c_str()), NK_TEXT_LEFT);
 				if (nk_button_image_label(ctx, pause_img, "Suspend", NK_TEXT_RIGHT)) {
 					control_client.suspendProcess(process.pid);
-					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL_SECONDS; //So it will update
 				}
 				if (nk_button_image_label(ctx, play_img, "Resume", NK_TEXT_RIGHT)) {
 					control_client.resumeProcess(process.pid);
-					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL_SECONDS; //So it will update
 				}
 				if (nk_button_image_label(ctx, stop_img, "Terminate", NK_TEXT_RIGHT)) {
 					control_client.terminateProcess(process.pid);
-					last_processes_get_time -= PROCESS_FETCH_INTERVAL; //So it will update
+					last_processes_get_time -= PROCESS_FETCH_INTERVAL_SECONDS; //So it will update
 				}
 			}
 		}

@@ -119,14 +119,14 @@ void InitView(nk_context *ctx) {
 				message = "The address you typed is not valid";
 			}
 		}
-		if (message != "") {
-			nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
-			nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
-			nk_layout_row_template_push_dynamic(ctx);
-			nk_layout_row_template_end(ctx);
-			nk_select_label(ctx, "", NK_TEXT_LEFT, 0); //Pad
-			nk_select_label(ctx, message.c_str(), NK_TEXT_LEFT, 0);
-		}
+		
+		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
+		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
+		nk_layout_row_template_push_dynamic(ctx);
+		nk_layout_row_template_end(ctx);
+		nk_select_label(ctx, "", NK_TEXT_LEFT, 0); //Pad
+		nk_select_label(ctx, message.c_str(), NK_TEXT_LEFT, 0);
+
 		std::vector<std::string> ips = multicast_client.getAddresses();
 		if (ips.size()) {
 			nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
@@ -182,7 +182,6 @@ void SettingsView(nk_context *ctx) {
 			current_view = VIEW_INIT;
 			screen_client.disconnect();
 			control_client.disconnect();
-			IoContextStop();
 			SetWindowMinSize(500, 300);
 			SetWindowSize(500, 300);
 		}

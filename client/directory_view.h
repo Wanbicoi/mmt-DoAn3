@@ -1,7 +1,4 @@
-int MAX_FILE_DROP_SIZE_MB = 16;
-#define MOUSE_DOUBLE_CLICK_SECONDS 0.2
 double last_click = 0;
-
 bool file_popup = 0;
 bool drop_popup = 0;
 fs::path from_path = "";
@@ -19,11 +16,10 @@ void FileOperationPopup(nk_context *ctx) {
 	static fs::path current_dir = to_path;
 	static std::string selected_entry = "";
 	static std::vector<FileInfo> files_list;
-	const static int FILELIST_FETCH_INTERVAL = 5; //seconds
-	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
+	static double last_files_get_time = -FILELIST_FETCH_INTERVAL_SECONDS;
 
 	double time = GetTime();
-	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
+	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL_SECONDS) { //5 seconds
 		files_list = control_client.listDir(current_dir.string());
 		last_files_get_time = time;
 	}
@@ -68,7 +64,7 @@ void FileOperationPopup(nk_context *ctx) {
 						last_click = 0;
 						switch (entry.type) {
 							case ENTRY_FILE:
-								last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
+								last_files_get_time += FILELIST_FETCH_INTERVAL_SECONDS; //to counter the latter -= operation
 								break;
 							case ENTRY_FOLDER:
 								current_dir /= filesystem_get_unicode_path(entry.name);
@@ -81,7 +77,7 @@ void FileOperationPopup(nk_context *ctx) {
 								current_dir = entry.name + ":\\";
 								break;
 						}
-						last_files_get_time -= FILELIST_FETCH_INTERVAL;
+						last_files_get_time -= FILELIST_FETCH_INTERVAL_SECONDS;
 						selected_entry = "";
 					}
 				}
@@ -181,10 +177,9 @@ void DirectoryView(nk_context *ctx) {
 	static fs::path current_dir = "";
 	static std::string selected_entry = "";
 	static std::vector<FileInfo> files_list;
-	const static int FILELIST_FETCH_INTERVAL = 5; //seconds
-	static double last_files_get_time = -FILELIST_FETCH_INTERVAL;
+	static double last_files_get_time = -FILELIST_FETCH_INTERVAL_SECONDS;
 
-	if (last_files_get_time == -FILELIST_FETCH_INTERVAL) {
+	if (last_files_get_time == -FILELIST_FETCH_INTERVAL_SECONDS) {
 		current_dir = filesystem_get_unicode_path(control_client.getDefaultLocation());
 	}
 
@@ -216,7 +211,7 @@ void DirectoryView(nk_context *ctx) {
 	}
 
 	double time = GetTime();
-	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL) { //5 seconds
+	if (time - last_files_get_time >= FILELIST_FETCH_INTERVAL_SECONDS) { //5 seconds
 		files_list = control_client.listDir(current_dir.string());
 		last_files_get_time = time;
 	}
@@ -254,7 +249,7 @@ void DirectoryView(nk_context *ctx) {
 					last_click = 0;
 					switch (entry.type) {
 						case ENTRY_FILE:
-							last_files_get_time += FILELIST_FETCH_INTERVAL; //to counter the latter -= operation
+							last_files_get_time += FILELIST_FETCH_INTERVAL_SECONDS; //to counter the latter -= operation
 							break;
 						case ENTRY_FOLDER:
 							current_dir /= filesystem_get_unicode_path(entry.name);
@@ -267,7 +262,7 @@ void DirectoryView(nk_context *ctx) {
 							current_dir = entry.name + ":\\";
 							break;
 					}
-					last_files_get_time -= FILELIST_FETCH_INTERVAL;
+					last_files_get_time -= FILELIST_FETCH_INTERVAL_SECONDS;
 					selected_entry = "";
 				}
 			}
