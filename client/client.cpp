@@ -61,14 +61,19 @@ bool ScreenClient::connect(const char *address) {
 		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), SOCKET_SCREEN_PORT);
 		screen_socket = tcp::socket(io_context, ep.protocol());
 
-		screen_socket.connect(ep);
-		connected = 1;
+		screen_socket.async_connect(ep, [this](const std::error_code& ec) {
+			if (!ec)
+				connected = 1;
+			else
+				connect_error = 1;
+		});
+		return 1;
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		connected = 0;
 	}
-	return connected;
+	return 0;
 }
 
 void ScreenClient::disconnect() {
@@ -79,6 +84,12 @@ void ScreenClient::disconnect() {
 
 bool ScreenClient::isConnected() {
 	return connected;
+}
+
+int ScreenClient::getLastConnectError() {
+	int error = connect_error;
+	connect_error = 0;
+	return error;
 }
 
 void ScreenClient::init() {
@@ -178,14 +189,19 @@ bool ControlClient::connect(const char *address) {
 		tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address), SOCKET_CONTROL_PORT);
 		control_socket = tcp::socket(io_context, ep.protocol());
 
-		control_socket.connect(ep);
-		connected = 1;
+		control_socket.async_connect(ep, [this](const std::error_code& ec) {
+			if (!ec)
+				connected = 1;
+			else
+				connect_error = 1;
+		});
+		return 1;
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		connected = 0;
 	}
-	return connected;
+	return 0;
 }
 
 void ControlClient::disconnect() {
@@ -196,6 +212,12 @@ void ControlClient::disconnect() {
 
 bool ControlClient::isConnected() {
 	return connected;
+}
+
+int ControlClient::getLastConnectError() {
+	int error = connect_error;
+	connect_error = 0;
+	return error;
 }
 
 void ControlClient::suspendProcess(int pid) {
@@ -301,7 +323,6 @@ std::vector<std::string> MulticastClient::ipFromBytes(const char *raw_data, int 
 
 	if (size > sizeof(data) / sizeof(char)) return ips;
 
-	std::cout << size << std::endl;
 	int offset = 0;
 	while (offset < size) {
 		bool null_left = 0;
@@ -314,10 +335,9 @@ std::vector<std::string> MulticastClient::ipFromBytes(const char *raw_data, int 
 		if (!null_left) break;
 
 		const char *currentString = raw_data + offset;
-		ips.push_back(currentString);
+		ips.emplace_back(std::string(currentString));
 		offset += ips.back().size() + 1;
 	}
-	std::cout << "Okay" << std::endl;
 
 	return ips;
 }
@@ -337,14 +357,14 @@ void MulticastClient::doReceive() {
 	multicast_socket.async_receive_from(asio::buffer(data, sizeof(data) / sizeof(char)), sender_endpoint_,
 		[this](std::error_code ec, std::size_t length) {
 			if (!ec) {
-				ip_addresses = ipFromBytes(data, length);
+				size = length;
 				doReceive();
 			}
 		});
 }
 
 std::vector<std::string> MulticastClient::getAddresses() {
-	return ip_addresses;
+	return ipFromBytes(data, size);
 }
 
 MulticastClient::~MulticastClient() {

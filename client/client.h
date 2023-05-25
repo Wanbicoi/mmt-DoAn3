@@ -8,6 +8,8 @@ class ScreenClient {
 private:
 	bool connected = 0;
 
+	int connect_error = 0;
+
 	ScreenInfo screen_info = {1080, 720};
 	OperationCode opcode; //dummy for async operations
 
@@ -37,6 +39,8 @@ public:
 
 	bool isConnected();
 
+	int getLastConnectError();
+
 	void init();
 
 	int getWidth();
@@ -62,6 +66,8 @@ class ControlClient {
 private:
 	bool connected = 0;
 
+	int connect_error = 0;
+
 	void getData(void *data, int size);
 
 	void getString(std::string *str);
@@ -79,6 +85,8 @@ public:
 	void disconnect();
 
 	bool isConnected();
+
+	int getLastConnectError();
 
 	void suspendProcess(int pid);
 
@@ -107,9 +115,9 @@ public:
 
 class MulticastClient {
 private:
-	char data[16 * 50];
+	char data[16 * 50] = {0};
 
-	std::vector<std::string> ip_addresses;
+	int size = 0;
 
 	std::vector<std::string> ipFromBytes(const char *raw_data, int size);
 public:

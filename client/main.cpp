@@ -90,8 +90,10 @@ bool validate_ip_address(const char *ip_address) {
 }
 
 void InitView(nk_context *ctx) {
-	static std::string error_message = "";
+	static std::string message = "";
 	static char ip_address[16];
+	if (screen_client.getLastConnectError() == 1 || control_client.getLastConnectError() == 1)
+		message = "Connection failed";
 	if (nk_begin(ctx, "Init", nk_rect(0, 0, GetScreenWidth(), GetScreenHeight()), 0)) {
 		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
 		nk_select_label(ctx, "Welcome to 3ChangeDev's remote desktop control", NK_TEXT_LEFT, 0);
@@ -107,39 +109,40 @@ void InitView(nk_context *ctx) {
 		if (nk_button_label(ctx, "Connect")) {
 			if (validate_ip_address(ip_address)) {
 				if (screen_client.connect(ip_address) && control_client.connect(ip_address)) {
-					
+					message = "Connecting to " + std::string(ip_address);
 				}
 				else {
-					error_message = "Cannot connect to server at address " + std::string(ip_address);
+					message = "Cannot connect to server at address " + std::string(ip_address);
 				}
 			}
 			else {
-				error_message = "The address you typed is not valid";
+				message = "The address you typed is not valid";
 			}
 		}
-		if (error_message != "") {
+		if (message != "") {
 			nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 			nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
 			nk_layout_row_template_push_dynamic(ctx);
 			nk_layout_row_template_end(ctx);
 			nk_select_label(ctx, "", NK_TEXT_LEFT, 0); //Pad
-			nk_select_label(ctx, error_message.c_str(), NK_TEXT_LEFT, 0);
+			nk_select_label(ctx, message.c_str(), NK_TEXT_LEFT, 0);
 		}
-		// std::vector<std::string> ips = multicast_client.getAddresses();
-		// if (ips.size()) {
-		// 	nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
-		// 	nk_select_label(ctx, "Alternatively, these addresses were detected on your network", NK_TEXT_LEFT, 0);
-		// 	nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 2);
-		// 	for (const auto &ip: ips) {
-		// 		if (nk_button_label(ctx, ip.c_str())) {
-		// 			// if (screen_client.connect(ip.c_str()) && control_client.connect(ip.c_str())) {
-		// 			// }
-		// 			// else {
-		// 			// 	error_message = "Cannot connect to server at address " + ip;
-		// 			// }
-		// 		}
-		// 	}
-		// }
+		std::vector<std::string> ips = multicast_client.getAddresses();
+		if (ips.size()) {
+			nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+			nk_select_label(ctx, "Alternatively, these addresses were detected on your network", NK_TEXT_LEFT, 0);
+			nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 2);
+			for (const auto &ip: ips) {
+				if (nk_button_label(ctx, ip.c_str())) {
+					if (screen_client.connect(ip.c_str()) && control_client.connect(ip.c_str())) {
+						message = "Connecting to " + ip;
+					}
+					else {
+						message = "Cannot connect to server at address " + ip;
+					}
+				}
+			}
+		}
 	}
 	nk_end(ctx);
 
@@ -168,7 +171,7 @@ void InitView(nk_context *ctx) {
 		SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
 
 		current_view = VIEW_NONE;
-		error_message = "";
+		message = "";
 	}
 }
 
