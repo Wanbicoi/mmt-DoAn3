@@ -105,6 +105,25 @@ public:
 	~ControlClient();
 };
 
+class MulticastClient {
+private:
+	char data[16 * 50];
+
+	std::vector<std::string> ip_addresses;
+
+	std::vector<std::string> ipFromBytes(const char *raw_data, int size);
+public:
+	MulticastClient();
+
+	void connect();
+
+	void doReceive();
+
+	std::vector<std::string> getAddresses();
+
+	~MulticastClient();
+};
+
 void IoContextPoll();
 
 void IoContextRun();

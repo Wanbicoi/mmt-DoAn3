@@ -6,10 +6,12 @@
 #include "types.h"
 #include "client.h"
 using asio::ip::tcp;
+using asio::ip::udp;
 
 asio::io_context io_context;
 tcp::socket screen_socket(io_context);
 tcp::socket control_socket(io_context);
+udp::socket multicast_socket(io_context);
 
 ScreenClient::ScreenClient() {
 
@@ -288,6 +290,69 @@ ControlClient::~ControlClient() {
 
 }
 
+//---------------------------------------------------------------
+
+MulticastClient::MulticastClient() {
+
+}
+
+std::vector<std::string> MulticastClient::ipFromBytes(const char *raw_data, int size) {
+	std::vector<std::string> ips;
+
+	if (size > sizeof(data) / sizeof(char)) return ips;
+
+	std::cout << size << std::endl;
+	int offset = 0;
+	while (offset < size) {
+		bool null_left = 0;
+		for (int i = offset; i < size; i++) {
+			if (raw_data[i] == '\0') {
+				null_left = 1;
+				break;
+			}
+		}
+		if (!null_left) break;
+
+		const char *currentString = raw_data + offset;
+		ips.push_back(currentString);
+		offset += ips.back().size() + 1;
+	}
+	std::cout << "Okay" << std::endl;
+
+	return ips;
+}
+
+void MulticastClient::connect() {
+	udp::endpoint listen_endpoint(asio::ip::make_address("0.0.0.0"), MULTICAST_PORT);
+	multicast_socket.open(listen_endpoint.protocol());
+	multicast_socket.set_option(udp::socket::reuse_address(true));
+	multicast_socket.bind(listen_endpoint);
+
+	// Join the multicast group.
+	multicast_socket.set_option(asio::ip::multicast::join_group(asio::ip::make_address(MULTICAST_ADDRESS)));
+}
+
+void MulticastClient::doReceive() {
+	udp::endpoint sender_endpoint_;
+	multicast_socket.async_receive_from(asio::buffer(data, sizeof(data) / sizeof(char)), sender_endpoint_,
+		[this](std::error_code ec, std::size_t length) {
+			if (!ec) {
+				ip_addresses = ipFromBytes(data, length);
+				doReceive();
+			}
+		});
+}
+
+std::vector<std::string> MulticastClient::getAddresses() {
+	return ip_addresses;
+}
+
+MulticastClient::~MulticastClient() {
+
+}
+
+//---------------------------------------------------------------
+
 bool io_stop = 1;
 
 void IoContextPoll() {
@@ -295,7 +360,7 @@ void IoContextPoll() {
 		if (!io_stop)
 			io_context.poll();
 		else
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(IO_CONTEXT_IDLE_SLEEP_SECONDS));
 	}
 }
 

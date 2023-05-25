@@ -1,14 +1,11 @@
-//#define UDP_SOCKET_PORT 5445
-//#define TCP_SOCKET_PORT 4435
 #pragma once
 #include <string>
 #include <vector>
-
-#define SOCKET_SCREEN_PORT 5343
-#define SOCKET_CONTROL_PORT 4354
+#include "config.h"
 
 enum OperationCode : uint16_t {
 	NONE = 0,
+	//Unused
 	SCREEN_CONNECT,
 	FRAME_DATA,
 	CONTROL_DISCONNECT,

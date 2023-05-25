@@ -7,6 +7,7 @@
 #include "ScreenCapture.h"
 #include "screen_server.h"
 #include "control_server.h"
+#include "multicast_server.h"
 #include "input.h"
 using asio::ip::tcp;
 
@@ -55,8 +56,8 @@ int main() {
 			}
 		})
 		->start_capturing();
-	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(16));
-	framgrabber->setMouseChangeInterval(std::chrono::milliseconds(16));
+	framgrabber->setFrameChangeInterval(std::chrono::milliseconds(SCREEN_CAPTURE_INTERVAL_MILLISECONDS));
+	framgrabber->setMouseChangeInterval(std::chrono::milliseconds(SCREEN_CAPTURE_INTERVAL_MILLISECONDS));
 	try {
 		asio::io_context io_context;
 
@@ -113,6 +114,9 @@ int main() {
 		ControlServer control_server(io_context, [&]() {
 
 		});
+
+		MulticastServer multicast_server(io_context, asio::ip::make_address(MULTICAST_ADDRESS), local_ips);
+
 		std::thread socket_thread(IoContextRun, std::ref(io_context));
 		
 		while (1) {
@@ -120,6 +124,7 @@ int main() {
 				if (GetKeySinceLastCall(i))
 					keys_pressed.push_back(i);
 			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(SCREEN_CAPTURE_INTERVAL_MILLISECONDS));
 		}
 
 	}

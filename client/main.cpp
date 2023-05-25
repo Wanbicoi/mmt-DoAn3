@@ -16,6 +16,7 @@ namespace fs = std::filesystem;
 
 ScreenClient screen_client;
 ControlClient control_client;
+MulticastClient multicast_client;
 
 #define PANEL_SIZE 38
 #define UI_LINE_HEIGHT 30
@@ -83,6 +84,7 @@ bool validate_ip_address(const char *ip_address) {
 		else
 			count++;
 	}
+	if (ip_address[TextLength(ip_address) - 1] == '.') return 0;
 
 	return 1;
 }
@@ -94,6 +96,7 @@ void InitView(nk_context *ctx) {
 		nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
 		nk_select_label(ctx, "Welcome to 3ChangeDev's remote desktop control", NK_TEXT_LEFT, 0);
 		nk_select_label(ctx, "Input the server's IP address in the box below", NK_TEXT_LEFT, 0);
+		nk_select_label(ctx, "It may takes up to 15 seconds to connect", NK_TEXT_LEFT, 0);
 		nk_layout_row_template_begin(ctx, UI_LINE_HEIGHT);
 		nk_layout_row_template_push_static(ctx, UI_LINE_HEIGHT * 3);
 		nk_layout_row_template_push_dynamic(ctx);
@@ -104,31 +107,7 @@ void InitView(nk_context *ctx) {
 		if (nk_button_label(ctx, "Connect")) {
 			if (validate_ip_address(ip_address)) {
 				if (screen_client.connect(ip_address) && control_client.connect(ip_address)) {
-					IoContextRun();
-
-					screen_client.init();
-
-					UnloadTexture(screen_texture);
-					//Screen texture Init
-					Image screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
-					screen_texture = LoadTextureFromImage(screen_image);
-					UnloadImage(screen_image);
-					SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
-					SetTextureWrap(screen_texture, TEXTURE_WRAP_CLAMP);
-
-					SetWindowMinSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
-					SetWindowSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
-
-					UnloadTexture(mouse_texture);
-					//Mouse texture init
-					Image mouse_image = GenImageColor(32, 32, BLANK);
-					mouse_texture = LoadTextureFromImage(mouse_image);
-					UnloadImage(mouse_image);
-					SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
-					SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
-
-					current_view = VIEW_NONE;
-					error_message = "";
+					
 				}
 				else {
 					error_message = "Cannot connect to server at address " + std::string(ip_address);
@@ -146,8 +125,51 @@ void InitView(nk_context *ctx) {
 			nk_select_label(ctx, "", NK_TEXT_LEFT, 0); //Pad
 			nk_select_label(ctx, error_message.c_str(), NK_TEXT_LEFT, 0);
 		}
+		// std::vector<std::string> ips = multicast_client.getAddresses();
+		// if (ips.size()) {
+		// 	nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 1);
+		// 	nk_select_label(ctx, "Alternatively, these addresses were detected on your network", NK_TEXT_LEFT, 0);
+		// 	nk_layout_row_dynamic(ctx, UI_LINE_HEIGHT, 2);
+		// 	for (const auto &ip: ips) {
+		// 		if (nk_button_label(ctx, ip.c_str())) {
+		// 			// if (screen_client.connect(ip.c_str()) && control_client.connect(ip.c_str())) {
+		// 			// }
+		// 			// else {
+		// 			// 	error_message = "Cannot connect to server at address " + ip;
+		// 			// }
+		// 		}
+		// 	}
+		// }
 	}
 	nk_end(ctx);
+
+	if (screen_client.isConnected() && control_client.isConnected()) {
+		IoContextRun();
+
+		screen_client.init();
+
+		UnloadTexture(screen_texture);
+		//Screen texture Init
+		Image screen_image = GenImageColor(screen_client.getWidth(), screen_client.getHeight(), BLANK);
+		screen_texture = LoadTextureFromImage(screen_image);
+		UnloadImage(screen_image);
+		SetTextureFilter(screen_texture, TEXTURE_FILTER_BILINEAR);
+		SetTextureWrap(screen_texture, TEXTURE_WRAP_CLAMP);
+
+		SetWindowMinSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
+		SetWindowSize(screen_texture.width / 2, screen_texture.height / 2 + PANEL_SIZE);
+
+		UnloadTexture(mouse_texture);
+		//Mouse texture init
+		Image mouse_image = GenImageColor(32, 32, BLANK);
+		mouse_texture = LoadTextureFromImage(mouse_image);
+		UnloadImage(mouse_image);
+		SetTextureFilter(mouse_texture, TEXTURE_FILTER_BILINEAR);
+		SetTextureWrap(mouse_texture, TEXTURE_WRAP_CLAMP);
+
+		current_view = VIEW_NONE;
+		error_message = "";
+	}
 }
 
 void SettingsView(nk_context *ctx) {
@@ -271,6 +293,9 @@ void UpdateFrame() {
 int main(void) {
 	std::thread socket_thread(IoContextPoll);
 
+	IoContextRun();
+	multicast_client.connect();
+	multicast_client.doReceive();
 	//Raylib Window Creation
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 	SetTargetFPS(60);
