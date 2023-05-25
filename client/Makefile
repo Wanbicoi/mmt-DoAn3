@@ -12,6 +12,6 @@ INCLUDE_PATH = -I../shared/include/
 LIBS_PATH = -L../shared/lib/
 
 main:
-	$(CXX) client.cpp main.cpp $(INCLUDE_PATH) $(LIBS_PATH) $(STATIC) $(RAYLIB_LIBS) $(ASIO_LIBS) -o client.exe
+	$(CXX) client.cpp main.cpp $(NO_CONSOLE) $(INCLUDE_PATH) $(LIBS_PATH) $(STATIC) $(RAYLIB_LIBS) $(ASIO_LIBS) -o client.exe
 	client.exe
 
